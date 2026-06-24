@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ru">
+<!--
+  ACTIVITY FLOW — Coverflow-карусель сущностей Behavior System на фоне ночного неба.
+  Сцены и порядок — в блоке CONFIG ниже (массив SCENES).
+  Анимация активного слайда — GIF (грузится лениво только в фокусе → быстрый рендер).
+  Управление: ‹ ›, клавиши ← →, точки снизу, свайп на телефоне. Карусель зациклена.
+-->
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Activity Flow — Behavior System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cutive+Mono&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#3d3d3d; --line:#9aa0a6; --line2:#c4c8cc;
+    --fill:#eef0f2; --fill2:#e3e6e9; --accent:#7a7f85; --card:#b9bec3;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%;}
+  body{
+    font-family:"Cutive Mono","Courier New",monospace;
+    color:#e8edf5; height:100vh; overflow:hidden;
+    display:flex; flex-direction:column;
+    background:
+      radial-gradient(135% 130% at 50% 48%, transparent 48%, rgba(0,0,0,.62) 100%),
+      radial-gradient(820px 460px at 50% 118%, rgba(74,104,170,.20), transparent 60%),
+      radial-gradient(560px 380px at 50% 122%, rgba(150,120,80,.07), transparent 60%),
+      radial-gradient(700px 540px at 86% -8%, rgba(92,66,156,.16), transparent 60%),
+      radial-gradient(1100px 820px at 14% 24%, rgba(30,48,104,.13), transparent 66%),
+      linear-gradient(180deg, #05060d 0%, #070912 52%, #030409 100%);
+  }
+  #sky{position:fixed; inset:0; width:100%; height:100%; z-index:0; pointer-events:none;}
+  #grain{
+    position:fixed; inset:0; z-index:0; pointer-events:none; opacity:.04; mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  header.bar, .stage-area, .caption, footer.bottom{position:relative; z-index:1;}
+
+  header.bar{ flex:0 0 auto; text-align:center; padding:10vh 22px 4px; }
+  .title{font-size:29px; font-weight:800; letter-spacing:-.3px;}
+
+  .stage-area{
+    flex:1 1 auto; position:relative; min-height:0;
+    perspective:1700px; perspective-origin:50% 45%;
+    display:flex; align-items:center; justify-content:center; overflow:hidden;
+  }
+  .track{ position:relative; width:100%; height:100%; transform-style:preserve-3d; }
+  .card{
+    --cw:min(48vw, 52vh * 1.698);
+    position:absolute; top:50%; left:50%;
+    width:var(--cw); height:calc(var(--cw) / 1.698);
+    margin-left:calc(var(--cw) / -2);
+    margin-top:calc(var(--cw) / -1.698 / 2);
+    border-radius:14px; background:var(--card);
+    box-shadow:0 24px 60px rgba(0,0,0,.45);
+    transition:transform .5s cubic-bezier(.25,.1,.25,1), opacity .5s, filter .5s;
+    transform-origin:center center; overflow:hidden;
+    display:flex; align-items:center; justify-content:center; will-change:transform;
+  }
+  .card.center{ background:#fff; border:none; }
+  .card .media{
+    position:absolute; inset:0; width:100%; height:100%; border:0;
+    object-fit:cover; display:none; background:#fff;
+  }
+  .card .side-label{
+    color:#fff; font-size:16px; font-weight:700; text-shadow:0 1px 3px rgba(0,0,0,.35); padding:6px 10px;
+  }
+
+  .nav-btn{
+    position:absolute; top:50%; transform:translateY(-50%); z-index:50; cursor:pointer; user-select:none;
+    background:rgba(255,255,255,.12); border:none; color:#fff;
+    font-family:"Cutive Mono","Courier New",monospace; font-size:13px; font-weight:700; letter-spacing:1px;
+    padding:10px 16px; border-radius:8px; backdrop-filter:blur(1px);
+  }
+  .nav-btn:hover{background:rgba(255,255,255,.22);}
+  .nav-btn:active{transform:translateY(-50%) scale(.94);}
+  .nav-btn.prev{left:5%;} .nav-btn.next{right:5%;}
+
+  .caption{ flex:0 0 auto; text-align:center; padding:2px 22px; }
+  .cap-text{font-size:12px; color:#9aa6bb; margin-top:2px;}
+  footer.bottom{ flex:0 0 auto; padding:10px 22px 16px; display:flex; flex-direction:column; gap:8px; align-items:center; }
+  .dots{display:flex; gap:9px;}
+  .dot{width:9px; height:9px; border-radius:2px; background:rgba(255,255,255,.30); cursor:pointer; transition:.2s;}
+  .dot.active{background:rgba(255,255,255,.95); transform:scale(1.25);}
+
+  @media (max-width:900px){ .card{ --cw:min(72vw, 46vh * 1.698); } .title{font-size:23px;} }
+  @media (max-width:560px){
+    header.bar{padding:10vh 14px 2px;}
+    .title{font-size:21px;}
+    .card{ --cw:min(82vw, 40vh * 1.698); border-radius:12px; }
+    .stage-area{perspective:1100px;}
+    .nav-btn{display:none;}
+    .cap-text{font-size:11px; padding:0 14px;}
+    .card .side-label{font-size:13px;}
+  }
+</style>
+</head>
+<body>
+
+  <canvas id="sky"></canvas>
+  <div id="grain"></div>
+
+  <header class="bar"><div class="title" id="deckTitle"></div></header>
+
+  <div class="stage-area">
+    <div class="track" id="track"></div>
+    <button class="nav-btn prev" id="prev">‹ PREV</button>
+    <button class="nav-btn next" id="next">NEXT ›</button>
+  </div>
+
+  <div class="caption"><div class="cap-text" id="capText"></div></div>
+  <footer class="bottom"><div class="dots" id="dots"></div></footer>
+
+<script>
+  /* ════════════ CONFIG ════════════ */
+  const TITLE = "Activity Flow";
+  // src — анимация активного слайда (.gif → img, .html → iframe). Грузится лениво в фокусе.
+  const SCENES = [
+    { name:"Ghost",           caption:"Состояния-заглушки: skeleton / empty / loading / error", src:"ghost_flow.gif" },
+    { name:"Dialog Tooltip",  caption:"Контекстные тултипы: Marketing (анонсы) и System (риски)", src:"dialog_tooltip_sequence.gif" },
+    { name:"Suggestive Chat", caption:"Поведение в чате: Empty / Empty State Active / Body + Questionary", src:"suggestive_chat_active.gif" },
+    { name:"Toast",           caption:"Событийные сигналы: очередь, перекрывает контент", src:"toast_behavior.gif" },
+    { name:"Feed",            caption:"Лента: Новости / События / Риски", src:"feed_behavior.gif" },
+    { name:"Active Point",    caption:"Бездействие: точка → тултип → целевая карточка", src:"active_point_behavior.gif" },
+    { name:"Banner Info",     caption:"Верхняя плашка: мега-критика или продуктовый маркетинг", src:"banner_behavior.gif" },
+  ];
+  /* ═════════════════════════════════ */
+
+  /* ── Звёздное небо ── */
+  (function(){
+    const cv=document.getElementById('sky'), ctx=cv.getContext('2d');
+    let w,h,stars,dpr;
+    function build(){
+      dpr=Math.min(window.devicePixelRatio||1,2);
+      w=cv.width=innerWidth*dpr; h=cv.height=innerHeight*dpr;
+      cv.style.width=innerWidth+'px'; cv.style.height=innerHeight+'px';
+      const count=Math.round((innerWidth*innerHeight)/9000);
+      stars=[];
+      for(let i=0;i<count;i++){
+        stars.push({ x:Math.random()*w, y:Math.random()*h,
+          r:(Math.random()*1.1+0.3)*dpr, a:Math.random()*0.35+0.15,
+          tw:Math.random()*0.012+0.003, ph:Math.random()*Math.PI*2, tint:Math.random()<0.25 });
+      }
+    }
+    function draw(t){
+      ctx.clearRect(0,0,w,h);
+      for(const s of stars){
+        const a=s.a + Math.sin(t*s.tw + s.ph)*0.12;
+        ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+        ctx.fillStyle = s.tint ? `rgba(200,220,255,${Math.max(0,a)})` : `rgba(255,255,255,${Math.max(0,a)})`;
+        ctx.shadowBlur=s.r*2.2; ctx.shadowColor='rgba(180,200,255,.35)'; ctx.fill();
+      }
+      ctx.shadowBlur=0; requestAnimationFrame(draw);
+    }
+    build(); requestAnimationFrame(draw);
+    let rt; addEventListener('resize',()=>{clearTimeout(rt); rt=setTimeout(build,150);});
+  })();
+
+  /* ── Приглушённые обложки боковых карточек (#2C2F46 → #E2F2FC) ── */
+  const DARK=[44,47,70], LIGHT=[226,242,252], GRAY=[140,144,152];
+  const lerp=(a,b,t)=>a.map((v,i)=>Math.round(v+(b[i]-v)*t));
+  const mute=c=>c.map((v,i)=>Math.round(v+(GRAY[i]-v)*0.22));
+  const rgb=c=>`rgb(${c[0]},${c[1]},${c[2]})`;
+  function randMutedGradient(){
+    const t1=Math.random()*0.55, t2=Math.min(1,t1+0.30+Math.random()*0.40);
+    const a=mute(lerp(DARK,LIGHT,t1)), b=mute(lerp(DARK,LIGHT,t2));
+    return `linear-gradient(${115+Math.floor(Math.random()*70)}deg, ${rgb(a)} 0%, ${rgb(b)} 100%)`;
+  }
+
+  /* ── Сборка карусели ── */
+  document.getElementById('deckTitle').textContent=TITLE;
+  const track=document.getElementById('track');
+  const dotsWrap=document.getElementById('dots');
+  const capText=document.getElementById('capText');
+  let cur=0; const cards=[];
+
+  SCENES.forEach((s,idx)=>{
+    s.grad=randMutedGradient();
+    const isGif=/\.gif($|\?)/i.test(s.src);
+    const media = s.src
+      ? (isGif ? `<img class="media" data-src="${s.src}" alt="${s.name}">`
+               : `<iframe class="media" data-src="${s.src}" title="${s.name}"></iframe>`)
+      : ``;
+    const el=document.createElement('div'); el.className='card'; el.dataset.idx=idx;
+    el.innerHTML=`${media}<div class="side-label">${s.name}</div>`;
+    el.onclick=()=>go(idx);
+    track.appendChild(el); cards.push(el);
+    const d=document.createElement('div'); d.className='dot'; d.onclick=e=>{e.stopPropagation();go(idx);}; dotsWrap.appendChild(d);
+  });
+
+  function layout(){
+    cards.forEach((el,idx)=>{
+      const pos=idx-cur, a=Math.abs(pos);
+      const x=pos*56, rot=-pos*48, sc=pos===0?1.2:0.82-(a-1)*0.06, z=-a*220;
+      el.style.transform=`translateX(${x}%) translateZ(${z}px) rotateY(${rot}deg) scale(${sc})`;
+      el.style.zIndex=100-a;
+      el.style.opacity=a>2?0:1;
+      el.style.pointerEvents=a>2?'none':'auto';
+      el.classList.toggle('center',pos===0);
+      const media=el.querySelector('.media'), lbl=el.querySelector('.side-label');
+      if(pos===0){
+        el.style.background=''; lbl.style.display='none';
+        if(media){ if(!media.src) media.src=media.dataset.src; media.style.display='block'; }
+      } else {
+        el.style.background=SCENES[idx].grad; lbl.style.display='';
+        if(media) media.style.display='none';
+      }
+    });
+    [...dotsWrap.children].forEach((d,k)=>d.classList.toggle('active',k===cur));
+    capText.textContent=SCENES[cur].caption||'';
+  }
+  function go(n){ cur=(n+SCENES.length)%SCENES.length; layout(); }
+  document.getElementById('prev').onclick=()=>go(cur-1);
+  document.getElementById('next').onclick=()=>go(cur+1);
+  document.addEventListener('keydown',e=>{ if(e.key==='ArrowRight')go(cur+1); if(e.key==='ArrowLeft')go(cur-1); });
+
+  /* свайп */
+  const stage=document.querySelector('.stage-area'); let x0=null,y0=null;
+  stage.addEventListener('touchstart',e=>{x0=e.touches[0].clientX;y0=e.touches[0].clientY;},{passive:true});
+  stage.addEventListener('touchend',e=>{
+    if(x0===null)return;
+    const dx=e.changedTouches[0].clientX-x0, dy=e.changedTouches[0].clientY-y0;
+    if(Math.abs(dx)>40 && Math.abs(dx)>Math.abs(dy)) go(dx<0?cur+1:cur-1);
+    x0=y0=null;
+  },{passive:true});
+
+  layout();
+</script>
+</body>
+</html>
