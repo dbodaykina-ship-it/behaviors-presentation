@@ -811,7 +811,7 @@ class SceneEngine{
       icon:'tip-risk-icon.png',
       title:'Нарушение R:R',
       body:'Риск по позиции выше 1,6% и превышает установленный лимит 1,0%',
-      anchorSel:'[data-nav="ai"]',   // примагничен к иконке меню (placeholder — уточнить, к какой)
+      anchorSel:'[data-nav="explore"]',   // примагничен к иконке громкоговорителя в сайдбаре
       timeoutMs:5000,                 // важное сообщение: уходит само через 5с, если не закрыли
       onDismiss:()=>this.go('S6'),
     });
@@ -822,7 +822,7 @@ class SceneEngine{
     this.chat.showSysTip({
       title:'Цена ушла от уровня идеи',
       body:'Сегодня отчёт по тикеру',
-      anchorSel:'[data-nav="ai"]',
+      anchorSel:'[data-nav="explore"]',
       timeoutMs:5000,
       onDismiss:()=>this.go('S7'),
     });
