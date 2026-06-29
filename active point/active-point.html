@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Limex — Activity flow (Утро + Рутина, S1–S7)</title>
+<title>Limex — Active Point</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,400;0,14..32,500;0,14..32,600&display=swap" rel="stylesheet">
@@ -270,6 +270,48 @@ body{
 .sys-tip .tip-close{position:absolute;top:7px;right:9px;color:rgba(255,255,255,.6);font-size:12px;line-height:12px;cursor:pointer;}
 .sys-tip .tip-body{margin-top:6px;color:var(--tx-56);font-family:var(--font-body);font-weight:400;font-size:12px;line-height:15px;letter-spacing:-.2px;}
 
+/* ——— Карточка рутины (1:1 по макету Routines / node 3715:31193) ——— */
+.routine-card{position:absolute;display:none;left:700px;top:200px;width:464px;z-index:5;}
+.routine-card.show{display:block;animation:chip-enter .26s var(--ease-out) both;}
+.routine-card img{display:block;width:100%;}
+/* обводка карточки — появляется, когда к ней относится тултип точки */
+.rc-outline{position:absolute;left:36px;right:34px;top:44px;bottom:8px;border-radius:8px;
+  border:2px solid var(--brand);box-shadow:0 0 0 4px rgba(138,124,248,.18),0 0 26px rgba(138,124,248,.4);
+  opacity:0;transition:opacity .3s ease;pointer-events:none;}
+.routine-card.highlight .rc-outline{opacity:1;}
+
+/* ——— Active Point — мигающая точка + тонкий бабл (1:1 по Group 5.svg / Figma 1990:49966) ——— */
+.active-point{position:absolute;display:none;align-items:center;z-index:7;}
+.active-point.show{display:flex;}
+/* точка 11px #8A7CF8 + мягкое гало #A977F8/0.3 (макет: r8.5 stroke 6) */
+.ap-dot{position:relative;width:11px;height:11px;flex:none;border-radius:50%;background:#8A7CF8;box-shadow:0 0 0 6px rgba(169,119,248,.3);}
+/* пульсирующее кольцо поверх — «моргание» */
+.ap-dot:before{content:"";position:absolute;left:50%;top:50%;width:11px;height:11px;margin:-5.5px 0 0 -5.5px;border-radius:50%;
+  border:1.5px solid #A977F8;transform-origin:center;animation:ap-ping 1.6s ease-out infinite;}
+@keyframes ap-ping{0%{transform:scale(1);opacity:.85}100%{transform:scale(3);opacity:0}}
+/* тонкий бабл: #8A7CF8, r4, белый текст одной строкой; стрелка влево к точке; появляется ПОСЛЕ пульсации */
+.ap-bubble{position:relative;margin-left:13px;background:#8A7CF8;color:#fff;
+  font-family:var(--font-body);font-weight:500;font-size:13px;line-height:16px;letter-spacing:-.2px;
+  padding:4px 13px;border-radius:4px;white-space:nowrap;cursor:pointer;
+  opacity:0;transform:translateX(-5px) scale(.98);transform-origin:left center;transition:opacity .4s ease, transform .45s cubic-bezier(.2,.8,.2,1);}
+.ap-bubble.in{opacity:1;transform:none;}
+.ap-bubble:before{content:"";position:absolute;left:-5px;top:50%;transform:translateY(-50%);width:0;height:0;border:5px solid transparent;border-right-color:#8A7CF8;}
+/* инпут-поп-ап у точки (1:1 по Group 6 / 1998:48805): поле ввода + «Отправить» + ✕ */
+.active-point .ap-input{display:none;position:relative;margin-left:13px;width:326px;
+  background:rgba(37,37,40,.97);border:1px solid #8A7CF8;border-radius:4px;padding:13px;
+  box-shadow:0 4px 4px -1px rgba(4,4,5,.08),0 4px 4px -1px rgba(4,4,5,.04);
+  animation:tip-enter .2s var(--ease-out) both;transform-origin:left center;}
+.active-point.input-mode .ap-bubble{display:none;}
+.active-point.input-mode .ap-input{display:block;}
+.ap-field{position:relative;display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.06);border-radius:2px;padding:10px 12px;overflow:hidden;}
+.ap-field .ap-cursor{width:1px;height:16px;background:#fff;flex:none;animation:ap-blink 1s step-end infinite;}
+@keyframes ap-blink{50%{opacity:0}}
+.ap-input-text{flex:1 0 0;min-width:0;color:rgba(255,255,255,.85);font-family:var(--font-body);font-weight:400;font-size:14px;line-height:20px;letter-spacing:-.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ap-send{position:relative;width:20px;height:20px;flex:none;cursor:pointer;}
+.ap-send img{position:absolute;inset:6.5%;width:87%;height:87%;display:block;}
+.ap-field .ap-underline{position:absolute;left:0;right:0;bottom:0;height:2px;background:#7863f6;}
+.ap-input-close{position:absolute;top:5px;right:8px;color:rgba(255,255,255,.6);font-size:12px;line-height:12px;cursor:pointer;}
+
 /* ——— Toast — 1:1 по макету (Figma 1839:42303); позиция (центр/низ) по toast_behavior.html ——— */
 .toast{position:absolute;display:none;left:33.924%;top:77.476%;width:36.111%;max-width:520px;z-index:50;
   background:rgba(37,37,40,.97);backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);
@@ -430,6 +472,22 @@ body{
         </div>
         <div class="tb-divider"></div>
         <div class="tb-btn" data-tool="map"><span class="ic"><i class="g gi-map t-white" data-ic="map"></i></span></div>
+      </div>
+    </div>
+
+    <!-- Карточка рутины (ЗАГЛУШКА) -->
+    <div class="routine-card" data-card>
+      <img src="assets/routine-card.png" alt="Карточка рутины">
+      <span class="rc-outline"></span>
+    </div>
+
+    <!-- Active Point (S7) -->
+    <div class="active-point" data-ap>
+      <span class="ap-dot"></span>
+      <span class="ap-bubble">Продолжить план?</span>
+      <div class="ap-input">
+        <div class="ap-field"><span class="ap-cursor"></span><span class="ap-input-text"></span><span class="ap-send"><img src="assets/send-icon.svg" alt="Отправить"></span><span class="ap-underline"></span></div>
+        <span class="ap-input-close">✕</span>
       </div>
     </div>
 
@@ -735,6 +793,21 @@ class SceneEngine{
     this.bus.on('aichat:suggestion',()=>this.onUserAct());
     // отправка собранной идеи → S5 (риск). §6: trigger B8.
     this.bus.on('aichat:send',(t)=>{this._sentText=t;if(['S4','conversation','engaged'].includes(this.step))this.go('S5');});
+    // Active Point реагирует на курсор: точка следует за мышью, пока не нажата
+    this._cursor=null;this._apFollow=false;
+    const stage=document.getElementById('stage');
+    stage.addEventListener('mousemove',(e)=>{
+      const r=stage.getBoundingClientRect();const sc=r.width/1440||1;
+      this._cursor={x:(e.clientX-r.left)/sc,y:(e.clientY-r.top)/sc};
+      if(this._apFollow)this._placeApAtCursor();
+    });
+  }
+  _placeApAtCursor(){
+    const ap=document.querySelector('[data-ap]');if(!ap||!this._cursor)return;
+    let x=this._cursor.x-5,y=this._cursor.y-5;           // точка по центру курсора
+    x=Math.max(8,Math.min(x,1440-360));                  // чтобы инпут-поп-ап не вылез за край
+    y=Math.max(60,Math.min(y,848-90));
+    ap.style.left=Math.round(x)+'px';ap.style.top=Math.round(y)+'px';
   }
   onUserAct(){
     if(this.step!=='S1'&&this.step!=='S2')return;
@@ -747,101 +820,60 @@ class SceneEngine{
 
   start(){this.restart();}
   restart(){
-    this.clearIdle();this._ignoredS2=false;
-    this.resetLayers();          // карточка / active point / toast — сброс
-    this.chat.reset();           // empty + чип убран
-    this.go('S1');
-  }
-  /* ——— Момент 1 ——— */
-  S1(){
-    this.setLabel('S1 · Empty State (без «взлетающего» чипа у инпута)');
-    // По правке автора: чипа-саджеста у инпута НЕ показываем.
-    // Проактивный саджест приходит как активный саджест в гриде (S2) после паузы бездействия.
-    this.chat.hideChip();
-    this._idle=setTimeout(()=>this.go('S2'), SCENE.idleMs);
-  }
-  S2(){
-    if(this._ignoredS2){return;}      // §4: не повторяется после игнора
-    this._ignoredS2=true;
-    this.setLabel('S2 · Empty State Active — активный саджест над гридом (свечение → искры → строкой)');
-    this.chat.hideChip();             // убрать S1 CTA-чип (один сигнал на экране)
-    // 1:1 по suggestive_chat_active.html / Figma 1932:44327
-    this.chat.playActiveSuggest('Запусти претрейд по рынку сегодня',()=>this.go('S3'));
-  }
-  /* ——— Момент 2: S3 Questionary ——— */
-  S3(){
     this.clearIdle();
-    this.setLabel('S3 · Questionary — сообщение вверх → «Думает…» → Q1');
-    this.chat.clearActiveSuggest();   // активный саджест убираем при входе в диалог
-    // §3: сообщение юзера уходит вверх → «Думает…» → Q1
-    this.chat.addUserMessage(this._chipText||'Собрать план на день');
+    this.resetLayers();          // карточка / active point / toast — сброс
+    this.chat.reset();           // empty
+    this.go('A1');
+  }
+  /* ——— A1 · Empty State — пауза бездействия ——— */
+  A1(){
+    this.setLabel('A1 · Empty State (бездействие)');
+    this.chat.hideChip();
+    this._idle=setTimeout(()=>this.go('A2'), SCENE.idleMs);   // §6: idle (демо ускорено)
+  }
+  /* ——— A2 · Active Point: карточка «достаётся» → точка у курсора → пульс + хинт → клик → инпут → «Отправить» → чат ——— */
+  A2(){
+    this.setLabel('A2 · Active Point — точка → инпут → отправка → чат');
+    this.showCard();                                  // карточка «достаётся» на доску
+    setTimeout(()=>{ if(this.step!=='A2')return;        // затем — точка у курсора
+      this.showActivePoint('Проанализировать результаты','анализировать результаты',(q)=>this.openChatWithQuery(q));
+    },700);
+  }
+  /* «Отправить» из инпута точки → открывается чат и обрабатывает запрос */
+  openChatWithQuery(q){
+    this.step='A2done';
+    this.chat.addUserMessage(q);
     this.chat.setState('conversation');
     this.chat.showThinking();
-    setTimeout(()=>{ if(this.step!=='S3')return;
-      this.chat.hideThinking();
-      // ответ ИИ в диалоге (копи-плейсхолдер из макета 1895:40308 — заменить на реальный)
+    setTimeout(()=>{ this.chat.hideThinking();
       this.chat.addAiMessage('Ответ на вопрос в каком-то количестве текста\n\nПосмотреть больше информации по теме?');
-      // Q1 (про глубину). Прогресс «1/3» — по брифу. Стиль 1:1 по questionary-макету.
-      this.chat.showQuestionary({
-        title:'Коротко или разобрать подробно?',
-        progress:'Вопрос 1/3',
-        options:['Коротко','Разобрать подробно'],
-        onNext:()=>this.go('S4'),
-      });
     }, SCENE.thinkMs);
   }
-  /* ——— S4 Body (готовые чипы) — следующий шаг ——— */
-  /* ——— S4 Body: готовые ответы (вставка в инпут, НЕ отправка — §4 insertNotSend) ——— */
-  S4(){
-    this.setLabel('S4 · Body — готовые ответы (клик подставляет в инпут, юзер отправляет сам)');
-    this.chat.setState('conversation');   // questionary скрыт, инпут снова виден
-    this.chat.showChips(
-      ['Проверить риски','Добавить в watchlist','Сравнить с планом'],
-      {onPick:(t)=>{ this.chat.sendText(t); }}   // по правке автора: клик по чипу сразу отправляет в чат
-    );
-  }
-  /* ——— S5 System Tooltip: риск по идее выше лимита (R1, гейт Risk Guardian) ——— */
-  S5(){
-    this.setLabel('S5 · Dialog Tooltip System — риск выше дневного лимита (R1)');
-    this.chat.clearChips();
-    if(this._sentText)this.chat.addUserMessage(this._sentText);
-    this.chat.setState('conversation');
-    // копи 1:1 из макета system-tooltip-risk.svg (бриф: «Риск по идее выше дневного лимита»)
-    this.chat.showSysTip({
-      icon:'tip-risk-icon.png',
-      title:'Нарушение R:R',
-      body:'Риск по позиции выше 1,6% и превышает установленный лимит 1,0%',
-      anchorSel:'[data-nav="ai"]',   // примагничен к иконке меню (placeholder — уточнить, к какой)
-      timeoutMs:5000,                 // важное сообщение: уходит само через 5с, если не закрыли
-      onDismiss:()=>this.go('S6'),
-    });
-  }
-  /* ——— S6 System Tooltip: контекст (нет отдельного макета — копи из брифа) ——— */
-  S6(){
-    this.setLabel('S6 · Dialog Tooltip System — контекст (нет макета: копи из брифа)');
-    this.chat.showSysTip({
-      title:'Цена ушла от уровня идеи',
-      body:'Сегодня отчёт по тикеру',
-      anchorSel:'[data-nav="ai"]',
-      timeoutMs:5000,
-      onDismiss:()=>this.go('S7'),
-    });
-  }
-  /* ——— S7 Toast — показываем ПЕРВЫМ (леттеринг 1:1 по Figma 1839:42303), единственный тост ——— */
-  S7(){
-    this.setLabel('S7 · Toast «Сигналы расходятся» (первым)');
-    this.showToast({
-      title:'Сигналы расходятся: новости vs. техника',
-      body:'Фундаментальный сигнал противоречит техническому паттерну. Высокий риск ложного пробоя по тикеру APPL',
-      actions:[
-        {label:'Посмотреть тикер'},
-        {label:'Сравнить сигналы'},
-        {label:'Алерт на подтверждение'},
-      ],
-      autohideMs:8000,
-    });
-  }
   /* === вспомогательные слои сцены === */
+  showCard(){document.querySelector('[data-card]').classList.add('show');}
+  hideCard(){const c=document.querySelector('[data-card]');c.classList.remove('show');c.classList.remove('highlight');}
+  highlightCard(on){document.querySelector('[data-card]').classList.toggle('highlight',on!==false);}
+  /* полный флоу Active Point: точка пульсирует → клик → инпут-поп-ап → «Отправить» → чат обрабатывает запрос */
+  showActivePoint(hint,query,onSubmit){
+    const ap=document.querySelector('[data-ap]');const bubble=ap.querySelector('.ap-bubble');
+    ap.classList.remove('input-mode');
+    bubble.textContent=hint;bubble.classList.remove('in');
+    ap.querySelector('.ap-input-text').textContent=query||'';
+    // точка появляется у реального курсора и следует за ним; нет данных о мыши → запасная позиция
+    if(this._cursor){this._placeApAtCursor();}else{ap.style.left='560px';ap.style.top='372px';}
+    this._apFollow=true;
+    ap.classList.add('show');                        // точка появляется и пульсирует
+    this.highlightCard(true);                        // обводка у карточки, к которой относится
+    clearTimeout(this._apTo);
+    this._apTo=setTimeout(()=>bubble.classList.add('in'),1600);   // тултип-хинт — после ~1.6с пульсации
+    // клик по точке/хинту → точка фиксируется на месте → инпут-поп-ап; «Отправить» → onSubmit(query)
+    const toInput=()=>{this._apFollow=false;ap.classList.add('input-mode');};
+    ap.querySelector('.ap-dot').onclick=toInput;
+    bubble.onclick=toInput;
+    ap.querySelector('.ap-send').onclick=()=>{const q=ap.querySelector('.ap-input-text').textContent;this.hideActivePoint();onSubmit&&onSubmit(q);};
+    ap.querySelector('.ap-input-close').onclick=()=>this.hideActivePoint();
+  }
+  hideActivePoint(){this._apFollow=false;clearTimeout(this._apTo);const ap=document.querySelector('[data-ap]');ap.classList.remove('show','input-mode');ap.querySelector('.ap-bubble').classList.remove('in');this.highlightCard(false);}
   showToast(cfg){const t=document.querySelector('[data-toast]');
     t.querySelector('.toast-title').textContent=cfg.title||'';
     t.querySelector('.toast-body').textContent=cfg.body||'';
@@ -853,10 +885,10 @@ class SceneEngine{
     clearTimeout(this._toastTo);
     if(cfg.autohideMs)this._toastTo=setTimeout(hide,cfg.autohideMs);}
   hideToast(){const t=document.querySelector('[data-toast]');clearTimeout(this._toastTo);if(!t.classList.contains('show'))return;t.classList.add('leaving');t.classList.remove('show');setTimeout(()=>t.classList.remove('leaving'),200);}
-  resetLayers(){this.hideToast();}
+  resetLayers(){this.hideCard();this.hideActivePoint();this.hideToast();}
   go(id){ this.clearIdle(); this.step=id; const fn=this[id]; if(typeof fn==='function') fn.call(this); }
   next(){
-    const order=['S1','S2','S3','S4','S5','S6','S7'];
+    const order=['A1','A2'];
     const i=order.indexOf(this.step);
     this.go(order[Math.min(i+1,order.length-1)]);
   }
