@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Active Point Mode</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,400;0,14..32,500;0,14..32,600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg-main:#040405;
+  --gray-low:rgba(28,28,31,.92);
+  --gray-faded:rgba(28,28,31,0);
+  --wrap-a2:rgba(255,255,255,.04);
+  --wrap-a8:rgba(255,255,255,.12);
+  --stroke-a4:rgba(255,255,255,.06);
+  --tx-100:#ffffff;
+  --tx-56:rgba(255,255,255,.6);
+  --tx-32:rgba(255,255,255,.4);
+  --brand:#8A7CF8;
+  --r2:2px; --r4:4px; --r8:8px; --r80:80px;
+  --hover:rgba(255,255,255,.06);
+  --hover-2:rgba(255,255,255,.08);
+  --font-title:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-body:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;}
+body{
+  background:#000;display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-body);-webkit-font-smoothing:antialiased;
+  text-rendering:geometricPrecision;overflow:hidden;
+}
+.stage{
+  position:relative;width:1440px;height:848px;
+  background:var(--bg-main);overflow:hidden;flex:none;
+  transform:scale(var(--s,1));transform-origin:center center;
+}
+
+/* ============ BOARD ============ */
+.board{position:absolute;inset:0;z-index:0;}
+.board .bg-dots{
+  position:absolute;left:50%;top:50%;width:1440px;height:900px;
+  transform:translate(-50%,-50%);pointer-events:none;
+  background-image:radial-gradient(rgba(255,255,255,.18) 1.2px, transparent 1.6px);
+  background-size:20.9px 20.9px;background-position:13px 4px;
+}
+.board[data-tool="cursor"]{cursor:default;}
+.board[data-tool="sticky"],.board[data-tool="target"],.board[data-tool="flash"],
+.board[data-tool="chartLine"],.board[data-tool="chartSquarePlus"],
+.board[data-tool="megaphone"],.board[data-tool="calendar"]{cursor:crosshair;}
+.board[data-tool="map"]{cursor:grab;}
+.board[data-tool="map"]:active{cursor:grabbing;}
+
+/* ============ ИКОНКИ ============ */
+.ic{position:relative;flex:none;display:block;}
+/* инлайн-SVG глиф (с состоянием, перекрашиваемый) */
+.ic>.g{position:absolute;display:block;line-height:0;color:var(--tone,#fff);transition:color .14s ease;}
+.ic>.g>svg{display:block;width:100%;height:100%;}
+.ic.flip>.g{transform:scaleX(-1);}
+.g.t-dim{--tone:var(--tx-56);}
+.g.t-white{--tone:#fff;}
+.g.violet{--tone:var(--brand);}
+/* статичный глиф (img) */
+.ic>img{position:absolute;display:block;max-width:none;}
+.ic.flip>img{transform:scaleX(-1);}
+/* геометрия (inset из Figma) */
+.gi-chartPie{inset:8.75%;}
+.gi-editNote{inset:13.58%;}
+.gi-target{inset:10.75% 10.75% 11.04% 11.04%;}
+.gi-calendar{inset:15%;}
+.gi-megaphone{inset:11.59% 13.72% 11.59% 13.73%;}
+.gi-ai{inset:10.62%;}
+.gi-telegram{inset:13.91% 8.6% 15.9% 10.65%;}
+.gi-support{inset:12.19% 15.45% 12.18% 15.45%;}
+.gi-cursor{inset:10.42% 8.33% 10.42% 12.5%;}
+.gi-sticky{inset:12.29%;}
+.gi-target24{inset:10.75% 10.75% 11.04% 11.04%;}
+.gi-flash{inset:8.54% 16.87%;}
+.gi-chartLine{inset:12.5%;}
+.gi-chartSquarePlus{inset:6.56% 8.65% 10.73% 8.65%;}
+.gi-megaphone24{inset:11.59% 13.72% 11.59% 13.73%;}
+.gi-calendar24{inset:15%;}
+.gi-map{inset:13.32% 10.8% 10.49% 9.39%;}
+
+/* ============ SIDEBAR ============ */
+.sidebar{
+  position:absolute;left:0;top:0;width:48px;height:848px;z-index:3;
+  background:var(--gray-low);backdrop-filter:blur(60px);-webkit-backdrop-filter:blur(60px);
+  border-right:1px solid rgba(255,255,255,0);
+  display:flex;flex-direction:column;justify-content:space-between;align-items:center;overflow:hidden;
+}
+.sb-top{display:flex;flex-direction:column;gap:24px;width:100%;}
+.sb-logo{height:48px;width:100%;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+.sb-logo img{width:26px;height:18.16px;display:block;}
+.sb-items{display:flex;flex-direction:column;gap:2px;width:100%;}
+.sb-item{display:flex;align-items:center;justify-content:center;padding:8px;width:100%;cursor:pointer;transition:background-color .12s ease;}
+.sb-item:hover{background:var(--hover);}
+.sb-item .ic{width:20px;height:20px;}
+.sb-bottom{display:flex;flex-direction:column;align-items:center;gap:16px;width:100%;padding-bottom:8px;}
+.sb-grp{display:flex;flex-direction:column;gap:2px;width:100%;}
+.sb-grp.fix .sb-item{width:48px;margin:0 auto;}
+.sb-avatar{padding:8px;display:flex;align-items:center;justify-content:center;width:100%;cursor:pointer;}
+.avatar{width:20px;height:20px;border-radius:var(--r80);object-fit:cover;display:block;}
+
+/* ============ AI CHAT ============ */
+.chat{
+  position:absolute;left:48px;top:0;width:480px;height:848px;z-index:4;
+  background:var(--gray-low);backdrop-filter:blur(60px);-webkit-backdrop-filter:blur(60px);
+  border-right:1px solid rgba(255,255,255,0);
+  display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-top:48px;overflow:hidden;
+  transform:translateX(-540px);transition:transform .42s cubic-bezier(.22,.61,.36,1);   /* по макету: чат выезжает слева только в финале (step-8) */
+}
+.chat.show{transform:none;}
+/* затемнение доски, когда открыт чат (step-8) */
+.board-dim{position:absolute;inset:0;background:rgba(4,4,5,.45);opacity:0;pointer-events:none;transition:opacity .42s ease;z-index:3;}
+.board-dim.show{opacity:1;}
+.conv{position:relative;flex:1 0 0;min-height:0;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:24px;padding:0 24px 64px;}
+.conv-title{width:100%;text-align:center;color:var(--tx-56);font-family:var(--font-title);font-weight:600;font-size:24px;line-height:32px;letter-spacing:-.4px;word-break:break-word;}
+.sg-items{width:100%;display:flex;flex-direction:column;gap:0;border-radius:var(--r4);overflow:hidden;}
+.sg-row{flex:0 0 auto;width:100%;display:flex;align-items:center;gap:10px;background:var(--wrap-a2);padding:12px 14px 12px 16px;overflow:hidden;cursor:pointer;transition:background-color .12s ease;}
+.sg-row:hover{background:rgba(255,255,255,.08);}
+.sg-row:active{background:rgba(255,255,255,.11);}
+.sg-row p{flex:1 0 0;min-width:0;color:var(--tx-56);font-family:var(--font-body);font-weight:400;font-size:12px;line-height:16px;letter-spacing:-.2px;word-break:break-word;}
+.sg-row .ic{width:16px;height:16px;}
+.conv-note{width:100%;text-align:center;color:var(--tx-32);font-family:var(--font-body);font-weight:400;font-size:10px;line-height:12px;letter-spacing:-.2px;word-break:break-word;}
+
+.footer{width:100%;max-width:800px;flex:none;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;background:linear-gradient(to bottom,var(--gray-faded),var(--gray-low));backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);}
+.subtext{width:480px;display:flex;flex-direction:column;align-items:center;padding:4px 8px;}
+.subtext p{width:100%;text-align:center;text-transform:uppercase;font-family:var(--font-title);font-weight:500;font-size:6px;line-height:8px;letter-spacing:0;color:var(--tx-32);}
+.subtext .more{text-decoration:underline;text-underline-position:from-font;cursor:pointer;}
+.input{width:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:8px;background:var(--gray-low);border-top:1px solid var(--stroke-a4);padding:8px 4px 10px;overflow:hidden;}
+.input-text{width:100%;display:flex;align-items:center;padding:0 8px;}
+.ce{flex:1 0 0;min-width:0;outline:none;white-space:pre-wrap;word-break:break-word;color:rgba(255,255,255,.92);font-family:var(--font-body);font-weight:400;font-size:14px;line-height:20px;letter-spacing:-.2px;caret-color:var(--brand);max-height:80px;overflow-y:auto;}
+.ce:empty:before{content:attr(data-ph);color:var(--tx-56);pointer-events:none;}
+.input-down{width:100%;display:flex;align-items:center;justify-content:space-between;}
+.icon-btn{position:relative;width:32px;height:32px;flex:none;cursor:pointer;border-radius:var(--r8);display:flex;align-items:center;justify-content:center;transition:background-color .12s ease;background:transparent;border:0;padding:0;}
+.icon-btn:hover{background:var(--hover-2);}
+.icon-btn .ic{width:20px;height:20px;}
+.input-right{display:flex;align-items:center;gap:0;}
+
+.scroller{position:absolute;right:-1px;top:48px;height:800px;display:flex;align-items:flex-start;justify-content:center;padding:4px 2px;z-index:3;}
+.scroll-thumb{width:4px;height:64px;min-height:16px;max-height:64px;background:var(--wrap-a8);border-radius:var(--r2);}
+
+.header{position:absolute;left:0;right:-1px;top:0;z-index:4;display:flex;align-items:center;gap:8px;padding:8px 6px 8px 16px;background:linear-gradient(to bottom,var(--gray-low),var(--gray-faded));}
+.header-left{flex:1 0 0;min-width:0;display:flex;align-items:center;gap:4px;}
+.header-title{font-family:var(--font-title);font-weight:600;font-size:14px;line-height:20px;letter-spacing:-.2px;color:var(--tx-100);text-transform:uppercase;white-space:nowrap;}
+.model-btn{position:relative;display:flex;align-items:center;justify-content:center;gap:0;border-radius:var(--r2);cursor:pointer;padding:0 2px;transition:background-color .12s ease;}
+.model-btn:hover{background:var(--hover);}
+.model-btn span.model-label{font-family:var(--font-title);font-weight:500;font-size:14px;line-height:20px;letter-spacing:-.2px;color:var(--tx-56);white-space:nowrap;}
+.model-btn .ic{width:20px;height:20px;}
+.model-btn .ic>img{transition:transform .16s ease;}
+.model-btn.open .ic>img{transform:rotate(180deg);}
+.model-menu{position:absolute;top:30px;left:0;min-width:148px;z-index:20;background:rgba(28,28,31,.98);backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);border:1px solid var(--stroke-a4);border-radius:var(--r8);padding:4px;box-shadow:0 16px 32px -4px rgba(4,4,5,.4),0 4px 4px -4px rgba(4,4,5,.3);display:none;flex-direction:column;gap:2px;}
+.model-menu.open{display:flex;}
+.model-opt{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 8px;border-radius:6px;font-family:var(--font-body);font-size:13px;line-height:16px;color:var(--tx-56);cursor:pointer;transition:background-color .1s ease;white-space:nowrap;}
+.model-opt:hover{background:var(--hover-2);}
+.model-opt.sel{color:var(--tx-100);}
+.model-opt .dot{width:6px;height:6px;border-radius:50%;background:var(--brand);opacity:0;flex:none;}
+.model-opt.sel .dot{opacity:1;}
+.header-icons{display:flex;align-items:center;gap:0;}
+
+/* ============ TOOLBAR ============ */
+.tools{position:absolute;right:0;top:50%;transform:translateY(-50%);height:848px;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px 12px 12px 4px;}
+.toolbar{display:flex;flex-direction:column;align-items:center;gap:4px;background:var(--gray-low);backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);border-radius:var(--r2);box-shadow:0 16px 32px -4px rgba(4,4,5,.08),0 4px 4px -4px rgba(4,4,5,.06);}
+.tb-group{display:flex;flex-direction:column;align-items:center;gap:2px;}
+.tb-btn{position:relative;padding:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:6px;transition:background-color .12s ease;}
+.tb-btn:hover{background:var(--hover-2);}
+.tb-btn .ic{width:24px;height:24px;}
+.tb-marker{position:absolute;left:4px;bottom:4px;width:4px;height:4px;overflow:hidden;}
+.tb-marker img{position:absolute;inset:0;width:100%;height:100%;transform:scaleX(-1);display:block;}
+.tb-divider{width:20px;height:1px;background:var(--wrap-a8);}
+
+/* ============ СЛОИ СЦЕНАРИЯ (S1–S10) ============ */
+:root{--ease-out:cubic-bezier(.16,1,.3,1);}
+/* чип-саджест (1:1 по suggestive-chat-chip.svg: 480×36, r4, #2C2C2E/0.85, blur, stroke a6, тени) */
+.chip-layer{display:flex;flex-direction:column;gap:8px;width:100%;padding:8px 8px 0;}
+.chip{display:flex;align-items:center;gap:10px;width:100%;min-height:36px;padding:8px 14px 8px 16px;
+  background:rgba(44,44,46,.85);backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);
+  border:1px solid rgba(255,255,255,.06);border-radius:4px;
+  box-shadow:0 4px 2px -4px rgba(4,4,5,.06),0 16px 16px -4px rgba(4,4,5,.08);cursor:pointer;}
+.chip-text{flex:1 0 0;min-width:0;color:#fff;font-family:var(--font-body);font-weight:500;font-size:13px;line-height:16px;letter-spacing:-.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.chip .ic{width:16px;height:16px;flex:none;}
+.chip .ic>img{position:absolute;display:block;max-width:none;}
+@keyframes chip-enter{from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes chip-exit{to{transform:translateY(8px);opacity:0}}
+.chip.enter{animation:chip-enter .24s var(--ease-out) both;}
+.chip.leaving{animation:chip-exit .16s ease-in both;}
+.chip:hover{background:rgba(54,54,58,.9);}
+/* Body State: чипы горизонтальным рядом над инпутом (НЕ перекрывают инпут) + закреплённая справа кнопка обновления */
+.chip-layer.body-row{flex-direction:row;flex-wrap:nowrap;gap:8px;align-items:center;}
+.chip-layer.body-row .chips-scroll{flex:1 1 auto;min-width:0;display:flex;gap:8px;align-items:center;overflow-x:auto;scrollbar-width:none;}
+.chip-layer.body-row .chips-scroll::-webkit-scrollbar{display:none;}
+.chip-layer.body-row .chip{width:auto;flex:0 0 auto;min-height:40px;padding:8px 12px 8px 14px;gap:8px;}
+.chip-layer.body-row .chip-text{flex:0 0 auto;}
+.chip-refresh{flex:0 0 auto;width:40px;height:40px;display:flex;align-items:center;justify-content:center;
+  background:rgba(44,44,46,.85);border:1px solid rgba(255,255,255,.06);border-radius:4px;cursor:pointer;color:rgba(255,255,255,.7);font-size:17px;line-height:1;}
+.chip-refresh:hover{background:rgba(54,54,58,.9);color:#fff;}
+/* idle/active-вариант (S2): фиол. обводка + мягкое свечение (1:1 по suggestive-chat-chip-active.svg) */
+.chip.idle{border-color:rgba(138,124,248,.44);
+  box-shadow:0 4px 2px -4px rgba(4,4,5,.06),0 16px 16px -4px rgba(4,4,5,.08),0 0 0 1px rgba(138,124,248,.22),0 8px 32px -6px rgba(138,124,248,.18);
+  animation:chip-enter .24s var(--ease-out) both, chip-glow 2.4s ease-in-out 1.6s infinite;}
+@keyframes chip-glow{0%,100%{box-shadow:0 4px 2px -4px rgba(4,4,5,.06),0 16px 16px -4px rgba(4,4,5,.08),0 0 0 1px rgba(138,124,248,.22),0 8px 32px -6px rgba(138,124,248,.16)}50%{box-shadow:0 4px 2px -4px rgba(4,4,5,.06),0 16px 16px -4px rgba(4,4,5,.08),0 0 0 1px rgba(138,124,248,.4),0 10px 40px -6px rgba(138,124,248,.32)}}
+
+/* ——— лог диалога (S3+): empty прячется, показывается лента сообщений ——— */
+.conv-log{display:none;flex-direction:column;gap:10px;width:100%;}
+.chat:not([data-state="empty"]) .conv-title,
+.chat:not([data-state="empty"]) .sg-items,
+.chat:not([data-state="empty"]) .conv-note{display:none;}
+.chat:not([data-state="empty"]) .conv-log{display:flex;}
+/* тело чата в диалоге идёт СВЕРХУ вниз (а не прилипает к низу), с прокруткой */
+.chat:not([data-state="empty"]) .conv{justify-content:flex-start;overflow-y:auto;}
+.conv-log{flex:0 0 auto;}
+/* сообщение пользователя (тёмный pill + карандаш) */
+.msg-user{align-self:stretch;display:flex;flex-direction:column;gap:6px;animation:chip-enter .24s var(--ease-out) both;}
+.msg-user .bubble{background:rgba(255,255,255,.06);border-radius:8px;padding:10px 14px;color:#fff;font-family:var(--font-body);font-size:14px;line-height:20px;letter-spacing:-.2px;}
+.msg-user .edit{align-self:flex-end;position:relative;width:16px;height:16px;opacity:.5;}
+.msg-user .edit img{position:absolute;inset:0;width:100%;height:100%;}
+/* ответ ИИ — обычный текст слева (без пузыря), как в макете */
+.msg-ai{align-self:stretch;color:rgba(255,255,255,.85);font-family:var(--font-body);font-weight:400;font-size:14px;line-height:20px;letter-spacing:-.2px;white-space:pre-wrap;animation:chip-enter .24s var(--ease-out) both;}
+/* «Думает…» (динамический элемент в логе) */
+.thinking{display:flex;align-items:center;gap:6px;color:var(--tx-56);font-family:var(--font-body);font-size:14px;line-height:20px;}
+.thinking .dots{display:inline-flex;gap:3px;align-items:flex-end;padding-bottom:2px;}
+.thinking .dots i{width:4px;height:4px;border-radius:50%;background:var(--tx-56);animation:tdot 1.2s infinite both;}
+.thinking .dots i:nth-child(2){animation-delay:.2s}
+.thinking .dots i:nth-child(3){animation-delay:.4s}
+@keyframes tdot{0%,80%,100%{opacity:.2}40%{opacity:1}}
+
+/* ——— Questionary (S3): нижняя панель вместо инпута, 1:1 по suggestive-chat-questionary.svg ——— */
+.q-panel{display:none;flex-direction:column;width:100%;background:var(--gray-low);border-top:1px solid var(--brand);
+  padding:14px 16px;gap:2px;animation:chip-enter .24s var(--ease-out) both;}
+.chat[data-state="questionary"] .q-panel{display:flex;}
+.chat[data-state="questionary"] .input,
+.chat[data-state="questionary"] .subtext,
+.chat[data-state="questionary"] .chip-layer{display:none;}
+.q-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding-bottom:10px;}
+.q-title{display:flex;align-items:center;gap:8px;min-width:0;color:var(--tx-56);font-family:var(--font-title);font-weight:500;font-size:11px;line-height:14px;letter-spacing:.3px;text-transform:uppercase;}
+.q-title .spark{position:relative;width:14px;height:14px;flex:none;}
+.q-prog{color:var(--tx-32);font-family:var(--font-title);font-weight:500;font-size:11px;line-height:14px;letter-spacing:.3px;text-transform:uppercase;white-space:nowrap;flex:none;}
+.q-opts{display:flex;flex-direction:column;}
+.q-opt{display:flex;align-items:center;gap:12px;padding:6px 0;cursor:pointer;}
+.q-radio{width:20px;height:20px;border-radius:50%;border:1.5px solid rgba(255,255,255,.28);flex:none;position:relative;transition:border-color .12s;}
+.q-opt:hover .q-radio{border-color:rgba(255,255,255,.5);}
+.q-opt.sel .q-radio,.q-own.sel .q-radio{border-color:var(--brand);}
+.q-opt.sel .q-radio:after,.q-own.sel .q-radio:after{content:"";position:absolute;inset:4px;border-radius:50%;background:var(--brand);}
+.q-label{color:#fff;font-family:var(--font-body);font-weight:500;font-size:15px;line-height:20px;letter-spacing:-.2px;}
+.q-own{display:flex;align-items:center;gap:12px;padding:6px 0;}
+.q-field{flex:1 0 0;min-width:0;background:rgba(255,255,255,.04);border:1px solid var(--stroke-a4);border-radius:8px;padding:8px 12px;color:#fff;font-family:var(--font-body);font-size:14px;line-height:20px;outline:none;}
+.q-field:empty:before{content:attr(data-ph);color:var(--tx-56);pointer-events:none;}
+.q-bar{display:flex;align-items:center;justify-content:space-between;padding-top:10px;}
+.q-mode{display:flex;align-items:center;gap:6px;color:var(--brand);font-family:var(--font-body);font-weight:500;font-size:14px;cursor:pointer;}
+.q-nav{display:flex;align-items:center;gap:4px;}
+.q-back{color:var(--tx-56);font-family:var(--font-body);font-weight:500;font-size:14px;padding:8px 14px;cursor:pointer;background:transparent;border:0;border-radius:8px;}
+.q-back:hover{background:var(--hover);}
+.q-next{color:#fff;background:rgba(255,255,255,.12);font-family:var(--font-body);font-weight:600;font-size:14px;padding:8px 16px;border:0;border-radius:8px;cursor:pointer;transition:background-color .12s;}
+.q-next:hover{background:rgba(255,255,255,.18);}
+
+/* ——— Dialog Tooltip System (S5/S6) — 1:1 по system-tooltip-risk.svg ——— */
+/* на уровне сцены: примагничивается к иконке меню — стрелка от кончика тултипа к иконке (по умолчанию слева) */
+.sys-tip{position:absolute;display:none;width:182px;left:0;top:0;z-index:40;
+  background:rgba(44,44,46,.92);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  border:1px solid var(--brand);border-radius:5px;padding:10px 12px;
+  box-shadow:0 8px 24px -6px rgba(4,4,5,.5);transform-origin:left center;}
+.sys-tip.show{display:block;animation:tip-enter .2s var(--ease-out) both;}
+.sys-tip.leaving{animation:tip-exit .14s ease-in both;}
+@keyframes tip-enter{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:scale(1)}}
+@keyframes tip-exit{to{opacity:0;transform:scale(.96)}}
+/* стрелка-«кончик» слева, по вертикальному центру тултипа (1:1 по макету 1880:38300: ~8×4px, вплотную к краю) */
+.sys-tip .tip-arrow{position:absolute;left:-4px;top:50%;margin-top:-4px;width:0;height:0;border-top:4px solid transparent;border-bottom:4px solid transparent;border-right:4px solid var(--brand);}
+.sys-tip .tip-close{cursor:pointer;}
+.sys-tip .tip-head{display:flex;align-items:center;gap:8px;padding-right:18px;}
+.sys-tip .tip-icon{width:16px;height:16px;border-radius:50%;flex:none;display:block;object-fit:cover;}
+.sys-tip .tip-title{color:#fff;font-family:var(--font-title);font-weight:600;font-size:13px;line-height:16px;letter-spacing:-.2px;}
+.sys-tip .tip-close{position:absolute;top:7px;right:9px;color:rgba(255,255,255,.6);font-size:12px;line-height:12px;cursor:pointer;}
+.sys-tip .tip-body{margin-top:6px;color:var(--tx-56);font-family:var(--font-body);font-weight:400;font-size:12px;line-height:15px;letter-spacing:-.2px;}
+
+/* ——— Карточки на доске (1:1 по Figma 2044:49408): график + коннектор + рутина ——— */
+.board-cards{position:absolute;inset:0;z-index:1;pointer-events:none;}
+.chart-card{position:absolute;left:173px;top:112px;width:400px;}
+.chart-card img{display:block;width:100%;}
+.routine-card{position:absolute;left:672px;top:246px;width:464px;}
+.routine-card img{display:block;width:100%;}
+/* коннектор-линия от ценника графика к карточке рутины (vector 573,338 → 685,463) */
+.connector{position:absolute;left:0;top:0;width:1440px;height:848px;overflow:visible;pointer-events:none;z-index:1;}
+.connector path{fill:none;stroke:var(--brand);stroke-width:1.5;}
+.connector .cn-dot{fill:var(--brand);}
+.connector .cn-dot2{fill:rgba(138,124,248,.5);}
+
+/* ——— Active Point — мигающая точка + тонкий бабл (1:1 по Group 5.svg / Figma 1990:49966) ——— */
+.active-point{position:absolute;display:none;align-items:center;z-index:7;}
+.active-point.show{display:flex;}
+/* точка 11px #8A7CF8 + мягкое гало #A977F8/0.3 (макет: r8.5 stroke 6) */
+.ap-dot{position:relative;width:11px;height:11px;flex:none;border-radius:50%;background:#8A7CF8;box-shadow:0 0 0 6px rgba(169,119,248,.3);}
+/* пульсирующее кольцо поверх — «моргание» */
+.ap-dot:before{content:"";position:absolute;left:50%;top:50%;width:11px;height:11px;margin:-5.5px 0 0 -5.5px;border-radius:50%;
+  border:1.5px solid #A977F8;transform-origin:center;animation:ap-ping 1.6s ease-out infinite;}
+@keyframes ap-ping{0%{transform:scale(1);opacity:.85}100%{transform:scale(3);opacity:0}}
+/* тултип «Включить Активное AI?» (1:1 по step-7): тёмный пилл справа от точки, стрелка вниз, текст + × + ⌄ */
+.ap-bubble{position:relative;margin-left:11px;display:flex;align-items:center;gap:8px;
+  background:rgba(37,37,40,.97);border:1px solid rgba(255,255,255,.08);color:#fff;
+  font-family:var(--font-body);font-weight:400;font-size:12px;line-height:16px;letter-spacing:-.2px;
+  padding:4px 8px;border-radius:4px;white-space:nowrap;cursor:pointer;
+  box-shadow:0 8px 24px -6px rgba(4,4,5,.5);
+  opacity:0;transform:translateX(-5px) scale(.98);transform-origin:left center;transition:opacity .4s ease, transform .45s cubic-bezier(.2,.8,.2,1);}
+.ap-bubble.in{opacity:1;transform:none;}
+/* треугольник вниз у левого нижнего угла тултипа */
+.ap-bubble:before{content:"";position:absolute;left:8px;bottom:-4px;width:0;height:0;
+  border-left:4px solid transparent;border-right:4px solid transparent;border-top:4px solid rgba(37,37,40,.97);}
+.ap-bubble .apb-x{color:rgba(255,255,255,.6);font-size:11px;line-height:1;cursor:pointer;}
+.ap-bubble .apb-x:hover{color:#fff;}
+.ap-bubble .apb-v{width:12px;height:12px;display:inline-flex;align-items:center;justify-content:center;opacity:.6;cursor:pointer;transition:opacity .12s ease;}
+.ap-bubble .apb-v img{width:9px;height:9px;display:block;}
+.ap-bubble .apb-v:hover{opacity:1;}
+
+/* бейдж «Активный AI» (1:1 по step-6): пилл вверху по центру доски, фиол. точка + текст + × */
+.ap-badge{position:absolute;left:670px;top:28px;display:none;align-items:center;gap:8px;z-index:8;
+  background:rgba(37,37,40,.97);border:1px solid rgba(138,124,248,.5);border-radius:6px;padding:4px 10px;
+  font-family:var(--font-body);font-weight:500;font-size:12px;line-height:16px;color:#fff;box-shadow:0 8px 24px -6px rgba(4,4,5,.5);}
+.ap-badge.show{display:flex;animation:tip-enter .25s var(--ease-out) both;}
+.ap-badge .bd-dot{width:6px;height:6px;border-radius:50%;background:var(--brand);flex:none;}
+.ap-badge .bd-x{color:rgba(255,255,255,.6);font-size:11px;cursor:pointer;}
+.ap-badge .bd-x:hover{color:#fff;}
+
+/* блок чип-саджестов внизу чата (1:1 по step-8 «active suggest block») */
+.ap-suggest{display:flex;gap:8px;width:100%;padding:8px 12px;overflow-x:auto;}
+.ap-suggest::-webkit-scrollbar{display:none;}
+.ap-suggest .sg-chip{flex:none;display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.06);border:1px solid var(--stroke-a4);border-radius:8px;padding:6px 10px;font-family:var(--font-body);font-size:12px;line-height:16px;letter-spacing:-.2px;color:var(--tx-56);white-space:nowrap;cursor:pointer;}
+.ap-suggest .sg-chip:hover{background:rgba(255,255,255,.1);color:#fff;}
+/* инпут-поп-ап у точки (1:1 по Group 6 / 1998:48805): поле ввода + «Отправить» + ✕ */
+.active-point .ap-input{display:none;position:relative;margin-left:13px;width:326px;
+  background:rgba(37,37,40,.97);border:1px solid #8A7CF8;border-radius:4px;padding:13px;
+  box-shadow:0 4px 4px -1px rgba(4,4,5,.08),0 4px 4px -1px rgba(4,4,5,.04);
+  animation:tip-enter .2s var(--ease-out) both;transform-origin:left center;}
+.active-point.input-mode .ap-bubble{display:none;}
+.active-point.input-mode .ap-input{display:block;}
+.ap-field{position:relative;display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.06);border-radius:2px;padding:10px 12px;overflow:hidden;}
+@keyframes ap-blink{50%{opacity:0}}
+/* реальное поле ввода: пользователь печатает сам; нативная каретка; контекстная подсказка-плейсхолдер */
+.ap-input-text{flex:1 0 0;min-width:0;outline:none;caret-color:#fff;color:rgba(255,255,255,.92);font-family:var(--font-body);font-weight:400;font-size:14px;line-height:20px;letter-spacing:-.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ap-input-text:empty:before{content:attr(data-ph);color:var(--tx-32);pointer-events:none;}
+.ap-send{position:relative;width:20px;height:20px;flex:none;cursor:pointer;}
+.ap-send img{position:absolute;inset:6.5%;width:87%;height:87%;display:block;}
+.ap-field .ap-underline{position:absolute;left:0;right:0;bottom:0;height:2px;background:#7863f6;}
+.ap-input-close{position:absolute;top:5px;right:8px;color:rgba(255,255,255,.6);font-size:12px;line-height:12px;cursor:pointer;}
+
+/* ——— Toast — 1:1 по макету (Figma 1839:42303); позиция (центр/низ) по toast_behavior.html ——— */
+.toast{position:absolute;display:none;left:33.924%;top:77.476%;width:36.111%;max-width:520px;z-index:50;
+  background:rgba(37,37,40,.97);backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);
+  border:1px solid rgba(255,255,255,.06);border-radius:4px;padding:12px;box-shadow:0 16px 32px -4px rgba(4,4,5,.5),0 4px 4px -4px rgba(4,4,5,.4);}
+.toast.show{display:flex;gap:8px;align-items:flex-start;animation:toast-enter .9s cubic-bezier(.22,.61,.36,1) both;}
+.toast.leaving{animation:toast-exit .4s ease-in both;}
+@keyframes toast-enter{from{transform:translateY(10px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes toast-exit{to{transform:translateY(6px);opacity:0}}
+.toast-ic{position:relative;width:20px;height:20px;flex:none;}
+.toast-ic img{position:absolute;inset:10.7%;width:78.6%;height:78.6%;display:block;}
+.toast-main{flex:1 0 0;min-width:0;display:flex;flex-direction:column;gap:4px;padding-right:8px;}
+.toast-title{color:#3cc8e3;font-family:var(--font-title);font-weight:600;font-size:14px;line-height:20px;letter-spacing:-.2px;}
+.toast-body{color:rgba(255,255,255,.56);font-family:var(--font-body);font-weight:400;font-size:12px;line-height:16px;letter-spacing:-.2px;}
+.toast-actions{display:flex;flex-wrap:wrap;gap:8px;padding-top:8px;padding-bottom:4px;}
+.toast-actions button{font-family:var(--font-title);font-weight:500;border:0;border-radius:2px;padding:4px 8px;cursor:pointer;font-size:12px;line-height:16px;letter-spacing:-.2px;}
+.toast-actions .tb1{background:rgba(255,255,255,.1);color:#fff;}            /* «Посмотреть тикер» — secondary */
+.toast-actions .tb1:hover{background:rgba(255,255,255,.16);}
+.toast-actions .tb2{background:transparent;color:rgba(255,255,255,.56);}     /* ghost */
+.toast-actions .tb2:hover{color:rgba(255,255,255,.85);}
+.toast-close{position:absolute;top:12px;right:12px;color:rgba(255,255,255,.56);font-size:13px;line-height:13px;cursor:pointer;}
+
+/* ——— Empty State Active — активный саджест (1:1 по suggestive_chat_active.html / Figma 1932:44327) ——— */
+/* По доку: чип-тост приходит над гридом → свечение по обводке → искры → РАСТВОРЯЕТСЯ И САДИТСЯ ПЕРВОЙ СТРОКОЙ
+   (обычная строка списка: тот же фон/текст/выравнивание; список не сдвигается во время посадки). */
+/* блок грида фиксирован по высоте → появляющийся чип СДВИГАЕТ список, последняя строка скрывается (не растёт вверх) */
+.sg-row.act{position:relative;z-index:3;opacity:0;background:#2C2C2E;border-radius:3px;
+  max-height:0;padding-top:0;padding-bottom:0;   /* стартует свёрнутой → плавно раскрывается, список не прыгает */
+  transition:max-height .4s cubic-bezier(.22,.61,.36,1), padding .4s cubic-bezier(.22,.61,.36,1), opacity .3s ease, background-color .5s ease, border-radius .5s ease;}
+.sg-row.act.in{opacity:1;max-height:60px;padding-top:12px;padding-bottom:12px;}
+.sg-row.act.settle{background:var(--wrap-a2);border-radius:0;}  /* садится обычной строкой (без тяжёлой тени) */
+.sg-row .act-fx{position:absolute;inset:0;pointer-events:none;opacity:1;transition:opacity .5s ease;z-index:1;}
+.sg-row.act.settle .act-fx{opacity:0;}
+.sg-row .act-fx svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;}
+.act-fx .border-static{fill:none;stroke:url(#bg-grad-as);stroke-opacity:.44;stroke-width:1;}
+.act-fx .border-glow{fill:none;stroke:#c4b5ff;stroke-width:1.6;filter:url(#glow-as);stroke-dasharray:160 900;stroke-dashoffset:1060;opacity:0;}
+.act-fx .border-glow.run{animation:runb 1.05s linear forwards;}
+@keyframes runb{0%{stroke-dashoffset:1060;opacity:0}10%{opacity:1}82%{opacity:1}100%{stroke-dashoffset:0;opacity:0}}
+.act-spark{position:absolute;border-radius:50%;opacity:0;pointer-events:none;z-index:6;}
+.act-spark.go{animation:burst .7s ease-out forwards;}
+@keyframes burst{0%{opacity:0;transform:translate(0,0) scale(.2)}25%{opacity:1;transform:translate(var(--dx),var(--dy)) scale(1.25)}100%{opacity:0;transform:translate(calc(var(--dx)*1.8),calc(var(--dy)*1.8)) scale(.3)}}
+
+</style>
+</head>
+<body>
+  <div class="stage" id="stage">
+
+    <!-- ============ BOARD ============ -->
+    <div class="board" data-component="board" data-tool="cursor">
+      <div class="bg-dots"></div>
+      <!-- карточки на доске (1:1 по Figma 2044:49408): график + коннектор + рутина -->
+      <div class="board-cards">
+        <div class="chart-card"><img src="assets/chart-card.png" alt="График — Тикер MOEX"></div>
+        <svg class="connector" viewBox="0 0 1440 848" preserveAspectRatio="none">
+          <path d="M573 346 H613 Q625 346 625 358 V449 Q625 461 637 461 H683"/>
+          <circle class="cn-dot" cx="688" cy="461" r="4"/>
+          <circle class="cn-dot2" cx="688" cy="503" r="3"/>
+        </svg>
+        <div class="routine-card" data-card><img src="assets/routine-card-v2.png" alt="Карточка рутины"></div>
+      </div>
+      <div class="board-dim" data-dim></div>
+    </div>
+
+    <!-- ============ SIDEBAR ============ -->
+    <aside class="sidebar" data-component="sidebar">
+      <div class="sb-top">
+        <div class="sb-logo"><img src="assets/logo.svg" alt="Limex"></div>
+        <div class="sb-items">
+          <div class="sb-item" data-nav="charts"><span class="ic"><i class="g gi-chartPie t-dim" data-ic="chartPie"></i></span></div>
+          <div class="sb-item" data-nav="notes"><span class="ic"><i class="g gi-editNote t-dim" data-ic="editNote"></i></span></div>
+          <div class="sb-item" data-nav="goals"><span class="ic"><i class="g gi-target t-dim" data-ic="target_sb"></i></span></div>
+          <div class="sb-item" data-nav="calendar"><span class="ic"><i class="g gi-calendar t-dim" data-ic="calendar_sb"></i></span></div>
+        </div>
+      </div>
+      <div class="sb-bottom">
+        <div class="sb-grp">
+          <div class="sb-item" data-nav="explore"><span class="ic flip"><i class="g gi-megaphone t-dim" data-ic="megaphone_sb"></i></span></div>
+          <div class="sb-item" data-nav="ai"><span class="ic"><i class="g gi-ai t-dim" data-ic="ai"></i></span></div>
+        </div>
+        <div class="sb-grp fix">
+          <div class="sb-item" data-nav="telegram"><span class="ic"><i class="g gi-telegram t-dim" data-ic="telegram"></i></span></div>
+          <div class="sb-item" data-nav="support"><span class="ic"><i class="g gi-support t-dim" data-ic="support"></i></span></div>
+        </div>
+        <div class="sb-avatar" data-nav="profile"><img class="avatar" src="assets/avatar.jpg" alt="Профиль"></div>
+      </div>
+    </aside>
+
+    <!-- ============ AI CHAT ============ -->
+    <section class="chat" data-component="aichat">
+      <div class="conv">
+        <p class="conv-title">Как я могу помочь вам сегодня?</p>
+
+        <div class="sg-items">
+          <div class="sg-row"><p>Какова моя альфа относительно бенчмарка?</p><span class="ic"><img src="assets/chevronRight.svg" style="top:20.67%;left:33.32%;width:33.27%;height:58.58%"></span></div>
+          <div class="sg-row"><p>Как мой портфель сравнивается с S&amp;P 500?</p><span class="ic"><img src="assets/chevronRight.svg" style="top:20.67%;left:33.32%;width:33.27%;height:58.58%"></span></div>
+          <div class="sg-row"><p>Есть ли перекос в распределении активов?</p><span class="ic"><img src="assets/chevronRight.svg" style="top:20.67%;left:33.32%;width:33.27%;height:58.58%"></span></div>
+          <div class="sg-row"><p>Насколько диверсифицирован мой портфель?</p><span class="ic"><img src="assets/chevronRight.svg" style="top:20.67%;left:33.32%;width:33.27%;height:58.58%"></span></div>
+          <div class="sg-row"><p>Какие активы показывают наихудшую динамику?</p><span class="ic"><img src="assets/chevronRight.svg" style="top:20.67%;left:33.32%;width:33.27%;height:58.58%"></span></div>
+        </div>
+        <p class="conv-note">Данная информация не является индивидуальной инвестиционной рекомендацией, и финансовые инструменты либо сделки, упомянутые в ней, могут не соответствовать вашему финансовому положению, цели (целям) инвестирования, допустимому риску и (или) ожидаемой доходности. АО «ФИНАМ» не несет ответственности за возможные убытки в случае совершения сделок либо инвестирования в финансовые инструменты, упомянутые в данной информации. Материал носит информационный характер, не является предложением упомянутых инструментов</p>
+        <div class="conv-log"></div>
+      </div>
+
+      <div class="footer">
+        <div class="chip-layer" data-chip-layer></div>
+        <div class="subtext">
+          <p>ОТВЕТ AI ЧАТА НЕ ЯВЛЯЕТСЯ ИНДИВИДУАЛЬНОЙ ИНВЕСТИЦИОННОЙ РЕКОМЕНДАЦИЕЙ И ПРЕДЛОЖЕНИЕМ УПОМЯНУТЫХ ИНСТРУМЕНТОВ. <span class="more">Еще</span></p>
+        </div>
+        <div class="input">
+          <div class="input-text"><div class="ce" contenteditable="true" data-ph="Помогу с любым вопросом"></div></div>
+          <div class="input-down">
+            <button class="icon-btn" data-act="add" title="Добавить"><span class="ic"><img src="assets/plusCircle.svg" style="inset:8.75%;width:82.5%;height:82.5%"></span></button>
+            <div class="input-right">
+              <button class="icon-btn" data-act="attach" title="Прикрепить"><span class="ic"><img src="assets/attachment.svg" style="top:9.05%;left:11.52%;width:76.96%;height:81.9%"></span></button>
+              <button class="icon-btn" data-act="mic" title="Голос"><span class="ic"><img src="assets/mic.svg" style="top:8.53%;left:17.74%;width:64.52%;height:82.94%"></span></button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Questionary (S3) — заменяет инпут в режиме вопросов -->
+        <div class="q-panel">
+          <div class="q-head">
+            <span class="q-title"><span class="ic spark"><i class="g violet" data-ic="ai" style="inset:0"></i></span><span class="q-title-text">Вопрос</span></span>
+            <span class="q-prog">Вопрос 1/3</span>
+          </div>
+          <div class="q-opts" data-q-opts></div>
+          <div class="q-own"><span class="q-radio"></span><div class="q-field" contenteditable="true" data-ph="Своя версия"></div></div>
+          <div class="q-bar">
+            <span class="q-mode">✕&nbsp;Режим</span>
+            <div class="q-nav"><button class="q-back">Назад</button><button class="q-next">Далее</button></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="scroller"><div class="scroll-thumb"></div></div>
+
+      <div class="header">
+        <div class="header-left">
+          <span class="header-title">ИИ чат</span>
+          <div class="model-btn" data-act="model">
+            <span class="model-label">Sonnet 4.5</span>
+            <span class="ic"><img src="assets/chevronDown.svg" style="top:43.75%;left:31.25%;width:37.5%;height:22.5%"></span>
+            <div class="model-menu">
+              <div class="model-opt sel" data-model="Sonnet 4.5"><span>Sonnet 4.5</span><span class="dot"></span></div>
+              <div class="model-opt" data-model="Opus 4.1"><span>Opus 4.1</span><span class="dot"></span></div>
+              <div class="model-opt" data-model="Haiku 4.5"><span>Haiku 4.5</span><span class="dot"></span></div>
+            </div>
+          </div>
+        </div>
+        <div class="header-icons">
+          <button class="icon-btn" data-act="expand" title="Развернуть"><span class="ic flip"><img src="assets/expand.svg" style="top:20.42%;left:18.24%;width:62.51%;height:62.54%"></span></button>
+          <button class="icon-btn" data-act="folder" title="Чаты"><span class="ic"><img src="assets/folder.svg" style="top:13.13%;left:8.96%;width:82.09%;height:73.74%"></span></button>
+          <button class="icon-btn" data-act="new" title="Новый чат"><span class="ic"><img src="assets/headerAdd.svg" style="inset:16.67%;width:66.66%;height:66.66%"></span></button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ TOOLBAR ============ -->
+    <div class="tools" data-component="toolbar">
+      <div class="toolbar">
+        <div class="tb-group">
+          <div class="tb-btn" data-tool="cursor"><span class="ic flip"><i class="g gi-cursor t-white" data-ic="cursor"></i></span><span class="tb-marker"><img src="assets/marker.svg"></span></div>
+          <div class="tb-btn" data-tool="sticky"><span class="ic"><i class="g gi-sticky t-white" data-ic="sticky"></i></span></div>
+          <div class="tb-btn" data-tool="target"><span class="ic"><i class="g gi-target24 t-white" data-ic="target_tb"></i></span></div>
+          <div class="tb-btn" data-tool="flash"><span class="ic"><i class="g gi-flash t-white" data-ic="flash"></i></span><span class="tb-marker"><img src="assets/marker.svg"></span></div>
+          <div class="tb-btn" data-tool="chartLine"><span class="ic"><i class="g gi-chartLine t-white" data-ic="chartLine"></i></span></div>
+          <div class="tb-btn" data-tool="chartSquarePlus"><span class="ic"><i class="g gi-chartSquarePlus t-white" data-ic="chartSquarePlus"></i></span><span class="tb-marker"><img src="assets/marker.svg"></span></div>
+          <div class="tb-btn" data-tool="megaphone"><span class="ic flip"><i class="g gi-megaphone24 t-white" data-ic="megaphone_tb"></i></span></div>
+          <div class="tb-btn" data-tool="calendar"><span class="ic"><i class="g gi-calendar24 t-white" data-ic="calendar_tb"></i></span></div>
+        </div>
+        <div class="tb-divider"></div>
+        <div class="tb-btn" data-tool="map"><span class="ic"><i class="g gi-map t-white" data-ic="map"></i></span></div>
+      </div>
+    </div>
+
+    <!-- Бейдж «Активный AI» (1:1 по step-6) -->
+    <div class="ap-badge" data-badge><span class="bd-dot"></span><span class="bd-text">Активный AI</span><span class="bd-x">✕</span></div>
+
+    <!-- Active Point: точка → тултип «Включить Активное AI?» → инпут-поп-ап -->
+    <div class="active-point" data-ap>
+      <span class="ap-dot"></span>
+      <span class="ap-bubble"><span class="apb-text">Включить Активное AI?</span><span class="apb-x">✕</span><span class="apb-v"><img src="assets/tick.svg" alt="Подтвердить"></span></span>
+      <div class="ap-input">
+        <div class="ap-field"><div class="ap-input-text" contenteditable="true" data-ph="анализировать результаты"></div><span class="ap-send"><img src="assets/send-icon.svg" alt="Отправить"></span><span class="ap-underline"></span></div>
+        <span class="ap-input-close">✕</span>
+      </div>
+    </div>
+
+    <!-- Dialog Tooltip System (S5/S6) — на уровне сцены, примагничивается к иконке меню -->
+    <div class="sys-tip">
+      <span class="tip-arrow"></span>
+      <span class="tip-close">✕</span>
+      <div class="tip-head"><img class="tip-icon" alt=""><span class="tip-title"></span></div>
+      <div class="tip-body"></div>
+    </div>
+
+    <!-- Toast (S8) -->
+    <div class="toast" data-toast>
+      <span class="toast-ic"><img src="assets/toast-signal-icon.svg" alt=""></span>
+      <div class="toast-main"><div class="toast-title"></div><div class="toast-body"></div><div class="toast-actions"></div></div>
+      <span class="toast-close">✕</span>
+    </div>
+
+  </div>
+
+<script>
+window.ICONS={
+  chartPie:`<svg viewBox="0 0 16.5 16.5" width="100%" height="100%" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"><path d="M8.25041 0L8.6744 0.0105795C13.0339 0.231443 16.5 3.83685 16.5 8.25041C16.4998 12.8068 12.8068 16.4998 8.25041 16.5C3.69382 16.5 0.000176075 12.8069 0 8.25041C2.25288e-05 3.69457 3.69367 1.93294e-07 8.25041 0ZM7.50007 1.54217C4.12495 1.91534 1.49987 4.77639 1.49985 8.25041C1.50003 11.9785 4.52226 15.0001 8.25041 15.0001C9.0984 15.0001 9.9092 14.8421 10.6568 14.5566L7.5839 8.59383C7.5292 8.48769 7.50013 8.36982 7.50007 8.25041V1.54217ZM9.35719 8.76148L11.9899 13.869C13.8042 12.659 15 10.595 15.0001 8.25041C15.0001 7.98198 14.9818 7.71719 14.9513 7.45694L9.35719 8.76148ZM8.99993 7.30476L14.6128 5.99615C13.7649 3.60301 11.607 1.83036 8.99993 1.54217V7.30476Z" fill="currentColor"/></svg>`,
+  editNote:`<svg viewBox="0 0 14.5685 14.5685" width="100%" height="100%" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"><path d="M5.625 0.318504C6.03921 0.318504 6.375 0.654291 6.375 1.0685C6.37494 1.48267 6.03918 1.8185 5.625 1.8185H1.875C1.66789 1.8185 1.5 1.9864 1.5 2.1935V12.6935C1.50006 12.9006 1.66793 13.0685 1.875 13.0685H12.375C12.5821 13.0685 12.7499 12.9006 12.75 12.6935V8.9435C12.75 8.52929 13.0858 8.1935 13.5 8.1935C13.9142 8.1935 14.25 8.52929 14.25 8.9435V12.6935C14.2499 13.729 13.4105 14.5685 12.375 14.5685H1.875C0.839505 14.5685 6.18369e-05 13.729 0 12.6935V2.1935C1.6912e-07 1.15797 0.839466 0.318504 1.875 0.318504H5.625Z" fill="currentColor"/><path d="M11.0017 0.384422C11.5143 -0.128142 12.3458 -0.12814 12.8584 0.384422L14.1841 1.71011C14.6966 2.22267 14.6966 3.05423 14.1841 3.5668L8.44116 9.30898C8.19504 9.55502 7.8612 9.6935 7.51318 9.6935H5.8125L5.71655 9.68838C5.27548 9.64351 4.92504 9.29301 4.88013 8.85195L4.875 8.756V7.05532C4.875 6.7073 5.01348 6.37347 5.25952 6.12734L11.0017 0.384422ZM6.375 7.13296V8.1935H7.43555L12.991 2.63882L11.9297 1.57754L6.375 7.13296Z" fill="currentColor"/></svg>`,
+  target_sb:`<svg viewBox="0 0 15.6405 15.6405" width="100%" height="100%" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"><path d="M14.9577 7.14116C15.3029 7.14116 15.5827 7.42098 15.5827 7.76616V7.84917C15.5827 12.1524 12.0946 15.6405 7.79134 15.6405C3.48812 15.6405 0 12.1524 0 7.84917C9.93411e-08 3.54595 3.48812 0.0578284 7.79134 0.0578283H7.87435C8.21953 0.0578283 8.49935 0.33765 8.49935 0.682828V0.848844C8.49935 1.19402 8.21953 1.47384 7.87435 1.47384H7.79134C4.27053 1.47384 1.41602 4.32835 1.41602 7.84917C1.41602 11.37 4.27053 14.2245 7.79134 14.2245C11.3122 14.2245 14.1667 11.37 14.1667 7.84917V7.76616C14.1667 7.42098 14.4465 7.14116 14.7917 7.14116H14.9577ZM11.416 7.14116C11.7612 7.14116 12.041 7.42098 12.041 7.76616V7.84917C12.041 10.1964 10.1386 12.0988 7.79134 12.0988C5.44413 12.0988 3.54167 10.1964 3.54167 7.84917C3.54167 5.50196 5.44413 3.5995 7.79134 3.5995H7.87435C8.21953 3.5995 8.49935 3.87932 8.49935 4.22449V4.39051C8.49935 4.73569 8.21953 5.01551 7.87435 5.01551H7.79134C6.22653 5.01551 4.95768 6.28436 4.95768 7.84917C4.95768 9.41398 6.22653 10.6828 7.79134 10.6828C9.35615 10.6828 10.625 9.41398 10.625 7.84917V7.76616C10.625 7.42098 10.9048 7.14116 11.25 7.14116H11.416ZM12.8735 0.00818639C13.0721 0.0407363 13.2431 0.167255 13.3325 0.347542L13.383 0.449267L13.9852 1.65369L15.1921 2.25754H15.1912L15.293 2.30799C15.4733 2.39742 15.5998 2.56838 15.6323 2.76698C15.6648 2.96552 15.5996 3.16752 15.4574 3.30978L13.2259 5.54123C13.1087 5.65844 12.9498 5.72433 12.784 5.72433H10.918L8.29183 8.34966L8.23649 8.40581C8.11963 8.52429 7.96019 8.59152 7.79378 8.59217C7.62728 8.59275 7.46719 8.5268 7.34945 8.40907L7.23145 8.29106C7.11371 8.17333 7.04777 8.01323 7.04834 7.84673C7.04899 7.68033 7.11622 7.52088 7.2347 7.40402L7.29411 7.34543L9.91618 4.72254V2.85649C9.91618 2.69073 9.98207 2.53181 10.0993 2.4146L12.3307 0.183154L12.3869 0.133512C12.5236 0.0262299 12.6998 -0.0202286 12.8735 0.00818639ZM11.1662 3.11528V4.47433H12.5252L13.96 3.03879L13.2397 2.67908C13.1189 2.61859 13.021 2.51998 12.9606 2.39914L12.6009 1.67974L11.1662 3.11528Z" fill="currentColor"/></svg>`,
+  calendar_sb:`<svg viewBox="0 0 14 14" width="100%" height="100%" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"><path d="M9.8 0C10.1866 0 10.5 0.313401 10.5 0.7V2.1H12.25C13.2165 2.1 14 2.8835 14 3.85V12.25C14 13.2165 13.2165 14 12.25 14H1.75C0.783501 14 8.45585e-09 13.2165 0 12.25V3.85C1.35296e-07 2.8835 0.783502 2.1 1.75 2.1H3.5V0.7C3.5 0.313401 3.8134 0 4.2 0C4.5866 0 4.9 0.313401 4.9 0.7V2.1H9.1V0.7C9.1 0.313401 9.4134 0 9.8 0ZM1.4 12.25C1.4 12.4433 1.5567 12.6 1.75 12.6H12.25C12.4433 12.6 12.6 12.4433 12.6 12.25V7H1.4V12.25ZM1.75 3.5C1.5567 3.5 1.4 3.6567 1.4 3.85V5.6H12.6V3.85C12.6 3.6567 12.4433 3.5 12.25 3.5H1.75Z" fill="currentColor"/></svg>`,
+  megaphone_sb:`<svg viewBox="0 0 14.5101 15.3645" width="100%" height="100%" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"><path d="M12.8304 0.0120862C13.111 -0.0240295 13.3968 0.0212817 13.6532 0.141481C13.9092 0.261593 14.1257 0.452195 14.2773 0.690797C14.4291 0.929654 14.5101 1.20716 14.5101 1.48995V12.1084L14.506 12.2142C14.4887 12.4602 14.4102 12.6993 14.2773 12.9084C14.1257 13.147 13.9091 13.3376 13.6532 13.4577C13.3969 13.5779 13.1112 13.6216 12.8304 13.5855C12.5499 13.5493 12.2852 13.4351 12.0679 13.2543L8.33496 10.1431L8.31136 10.1236H7.52197V13.7881C7.52192 14.2061 7.35532 14.6074 7.05973 14.903C6.7641 15.1986 6.36286 15.3645 5.94482 15.3645H5.07161C4.65366 15.3645 4.25232 15.1985 3.95671 14.903C3.66112 14.6074 3.49452 14.2061 3.49447 13.7881V10.1236H1.57715C1.15907 10.1236 0.757876 9.95696 0.46224 9.66134C0.166669 9.36572 1.15212e-05 8.96446 0 8.54643V5.05278C0 4.63476 0.166687 4.23349 0.46224 3.93787C0.757877 3.64223 1.15906 3.47563 1.57715 3.47563H8.31136L8.33496 3.4561L12.0646 0.346559L12.0654 0.347373L12.1509 0.280641C12.3511 0.136609 12.5847 0.0437171 12.8304 0.0120862ZM4.90072 10.1236V13.7881C4.90077 13.8336 4.91944 13.8768 4.95117 13.9086C4.98287 13.9401 5.02607 13.9582 5.07161 13.9582H5.94482C5.99045 13.9582 6.03355 13.9402 6.06527 13.9086C6.097 13.8768 6.11486 13.8336 6.11491 13.7881V10.1236H4.90072ZM9.0153 4.71912C8.88894 4.82433 8.72949 4.88188 8.56527 4.88188H7.52197V8.71733H8.56527C8.72951 8.71733 8.88893 8.77485 9.0153 8.88009L13.1038 12.2858V1.31173L9.0153 4.71912ZM1.57715 4.88188C1.53151 4.88188 1.48845 4.90059 1.45671 4.93233C1.42507 4.96404 1.40706 5.00717 1.40706 5.05278V8.54643C1.40709 8.59195 1.425 8.63512 1.45671 8.66687C1.48843 8.69857 1.5315 8.71733 1.57715 8.71733H6.11491V4.88188H1.57715Z" fill="currentColor"/></svg>`,
+  ai:`<svg viewBox="0 0 15.75 15.75" width="100%" height="100%" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"><path d="M5.95604 2.24634C6.40766 1.25109 7.84145 1.25123 8.2932 2.24634L8.33495 2.34888L9.61815 5.8938L9.65697 5.97217C9.70367 6.0452 9.77321 6.10172 9.85619 6.13183L13.4011 7.41504C14.4976 7.81219 14.5314 9.32741 13.5029 9.79394L13.4011 9.83496L9.85619 11.1182C9.74544 11.1584 9.65837 11.2455 9.61815 11.3562L8.33495 14.9011C7.9251 16.0329 6.32402 16.0331 5.9143 14.9011L4.63183 11.3562C4.60166 11.2731 4.54462 11.2037 4.47143 11.157L4.39379 11.1182L0.848867 9.83496C-0.282957 9.42515 -0.282955 7.82485 0.848867 7.41504L4.39379 6.13183L4.47143 6.09302C4.54461 6.04633 4.60166 5.97689 4.63183 5.8938L5.9143 2.34888L5.95604 2.24634ZM5.99633 6.38745C5.80956 6.9033 5.40327 7.30954 4.88744 7.49634L1.76879 8.625L4.88744 9.75366L4.98192 9.79175C5.4525 9.99212 5.82118 10.3788 5.99633 10.8625L7.12499 13.9805L8.25365 10.8625C8.44044 10.3467 8.84665 9.94043 9.36254 9.75366L12.4805 8.625L9.36254 7.49634C8.87881 7.32122 8.49141 6.95316 8.29101 6.48266L8.25365 6.38745L7.12499 3.2688L5.99633 6.38745Z" fill="currentColor"/><path d="M13.125 1.39935e-10C13.3442 4.08684e-05 13.534 0.152349 13.582 0.366211L13.7563 1.14258C13.8517 1.56688 14.1831 1.89833 14.6074 1.99365L15.3838 2.16797C15.5977 2.21598 15.75 2.40578 15.75 2.625C15.75 2.84421 15.5977 3.03401 15.3838 3.08203L14.6074 3.25635C14.1831 3.35167 13.8517 3.68312 13.7563 4.10742L13.582 4.88379C13.534 5.09765 13.3442 5.24996 13.125 5.25C12.9058 5.25 12.716 5.09768 12.668 4.88379L12.4936 4.10742C12.3983 3.68316 12.0668 3.35172 11.6426 3.25635L10.8655 3.08203C10.6518 3.03389 10.5 2.8441 10.5 2.625C10.5 2.4059 10.6518 2.21611 10.8655 2.16797L11.6426 1.99365C12.0668 1.89828 12.3983 1.56685 12.4936 1.14258L12.668 0.366211C12.716 0.152315 12.9058 -5.33098e-06 13.125 1.39935e-10Z" fill="currentColor"/></svg>`,
+  telegram:`<svg viewBox="0 0 16.1511 14.0383" width="100%" height="100%" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"><path d="M14.0577 0C14.7248 5.49209e-05 15.4129 0.312181 15.822 0.970052C16.1846 1.55327 16.2042 2.20821 16.0873 2.76774L16.0906 2.76937L16.0767 2.83284L14.0943 12.1777L14.0626 12.3283L14.0577 12.3234C13.9219 12.844 13.602 13.5204 12.85 13.8599C12.0281 14.2308 11.2487 13.9476 10.7951 13.6947C10.7395 13.6636 10.6854 13.6292 10.634 13.5913L5.90501 10.0985C5.70034 9.94766 5.53296 9.75102 5.41672 9.52474C5.39489 9.4822 5.37517 9.43852 5.35732 9.39453C5.28765 9.41354 5.21605 9.43009 5.14247 9.43929C4.93931 9.46463 4.73512 9.44847 4.53782 9.39941V9.40837L1.51943 8.45378L1.46083 8.43506V8.43099C1.18829 8.34221 0.865871 8.19733 0.586808 7.93783C0.24809 7.6228 -0.0593841 7.09921 0.00982272 6.43636C0.0727163 5.83504 0.416921 5.42409 0.67714 5.19531C0.948547 4.95677 1.26412 4.79133 1.56093 4.67285C1.56644 4.67065 1.57278 4.66836 1.57802 4.66634L13.1869 0.188802C13.4391 0.0788324 13.7095 0.0141434 13.9852 0.000813802H13.9877L14.056 0H14.0577ZM14.0601 1.58773C13.9697 1.59234 13.8808 1.61515 13.7989 1.65446L13.7932 1.6569L2.14931 6.14665L2.15012 6.14746C1.9576 6.2243 1.81804 6.30681 1.72613 6.38753C1.63378 6.4687 1.59564 6.54223 1.58941 6.60075C1.58364 6.65592 1.60423 6.71526 1.66835 6.7749C1.71752 6.82063 1.79044 6.86466 1.88889 6.90267L1.99876 6.93929L4.9081 7.8597L4.91054 7.86051C4.92202 7.86437 4.93397 7.86515 4.94553 7.86377C4.95852 7.86215 4.97032 7.85767 4.97971 7.85156H4.98134L11.8352 3.52702L11.836 3.5262C11.9252 3.47191 12.0143 3.43706 12.0948 3.42041C12.1735 3.40412 12.2504 3.40424 12.3121 3.42529C12.3434 3.43604 12.3755 3.45406 12.3991 3.48226C12.4236 3.51164 12.4357 3.5481 12.4341 3.58724C12.4312 3.66006 12.382 3.72829 12.3153 3.78743L12.3145 3.78662L6.85471 8.71908L6.84739 8.72559L6.84657 8.72477C6.8385 8.73064 6.83322 8.73807 6.82948 8.74512C6.825 8.75386 6.82216 8.76393 6.82216 8.77279C6.82222 8.78097 6.82486 8.78976 6.82948 8.79883L6.84739 8.81999L6.8482 8.8208L11.5715 12.3096C11.8373 12.457 12.0453 12.4803 12.1965 12.4121C12.348 12.3437 12.4738 12.1691 12.5407 11.8481L14.5232 2.50326L14.524 2.5C14.6021 2.18382 14.5645 1.95463 14.4735 1.80827C14.3841 1.6646 14.2357 1.58842 14.0601 1.58773Z" fill="currentColor"/></svg>`,
+  support:`<svg viewBox="0 0 13.8208 15.126" width="100%" height="100%" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"><path d="M6.71956 0C10.1792 0.000116627 12.0905 1.32382 13.0729 2.87679C13.7799 3.99455 13.8208 5.32443 13.8208 6.38021V11.7041C13.8208 12.145 13.719 12.8015 13.409 13.4172C13.0911 14.0485 12.5232 14.6879 11.5877 14.9219C10.8298 15.1114 9.9284 15.1434 9.14795 15.1188C8.35695 15.0939 7.62791 15.0084 7.18669 14.9349C6.75347 14.8625 6.46118 14.4526 6.5332 14.0194C6.60553 13.586 7.01538 13.293 7.44873 13.3651C7.8228 13.4274 8.48059 13.5052 9.19759 13.5278C9.92521 13.5508 10.6548 13.5146 11.2012 13.3781C11.5701 13.2859 11.817 13.041 11.9881 12.701C12.0211 12.6354 12.049 12.5677 12.0744 12.5H11.394C10.0542 12.4998 8.96815 11.4131 8.9681 10.0732V8.4432C8.9681 7.10325 10.0541 6.01666 11.394 6.01644H12.2241C12.2068 5.10056 12.1107 4.3338 11.7277 3.72803C11.0782 2.70125 9.71512 1.5911 6.71956 1.59098C3.82906 1.59098 2.47309 2.87181 1.90267 3.98844C1.63139 4.51973 1.591 5.171 1.59098 5.99284V6.01644H2.42594C3.76602 6.01644 4.8527 7.10312 4.8527 8.4432V10.0732C4.85265 11.4133 3.76599 12.5 2.42594 12.5H1.61051C0.720878 12.4998 5.52117e-05 11.7783 0 10.8887V5.99284C6.35471e-06 5.19287 0.0188628 4.17701 0.485026 3.26416C1.34125 1.58815 3.26211 0 6.71956 0ZM1.61051 7.60824C1.59989 7.6084 1.59098 7.61711 1.59098 7.62777V10.8846L1.59342 10.8976C1.59667 10.9039 1.60314 10.9081 1.61051 10.9082H2.42594C2.88695 10.9082 3.26085 10.5342 3.2609 10.0732V8.4432C3.2609 7.98216 2.88698 7.60824 2.42594 7.60824H1.61051ZM11.394 7.60824C10.9332 7.60845 10.5599 7.98229 10.5599 8.4432V10.0732C10.5599 10.5341 10.9332 10.908 11.394 10.9082H12.2095C12.2169 10.9082 12.2232 10.9039 12.2266 10.8976L12.229 10.8854V7.63102L12.2266 7.618C12.2232 7.61216 12.2168 7.60824 12.2095 7.60824H11.394Z" fill="currentColor"/></svg>`,
+  cursor:`<svg viewBox="0 0 19 19" width="100%" height="100%" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"><path d="M16.2016 0.161649C17.8118 -0.511389 19.4286 1.03397 18.8968 2.6423L18.8387 2.79875L12.5194 17.9158C11.8346 19.5537 9.46979 19.2521 9.16096 17.5734L9.13734 17.4071L8.50757 10.9452C8.48409 10.7059 8.29427 10.5161 8.05493 10.4926L1.59293 9.86284C-0.230759 9.68466 -0.606383 7.1877 1.0842 6.48085L16.2016 0.161649Z" fill="currentColor"/></svg>`,
+  sticky:`<svg viewBox="0 0 18.0996 18.0996" width="100%" height="100%" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"><path d="M16.4199 0C17.3478 0.000159292 18.0994 0.751804 18.0996 1.67969V10.832C18.0995 11.4278 17.8627 11.9986 17.4414 12.4199L12.4199 17.4414C11.9986 17.8627 11.4278 18.0995 10.832 18.0996H1.67969C0.751804 18.0994 0.000159292 17.3478 0 16.4199V1.67969C0.000159654 0.751804 0.751804 0.000159654 1.67969 0H16.4199ZM1.6582 16.4414H9.9209V10.75C9.92122 10.292 10.292 9.92122 10.75 9.9209H16.4414V1.6582H1.6582V16.4414ZM11.5801 15.9355L15.9355 11.5801H11.5801V15.9355Z" fill="currentColor"/></svg>`,
+  target_tb:`<svg viewBox="0 0 18.7686 18.7686" width="100%" height="100%" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"><path d="M17.9492 8.56939C18.3634 8.56939 18.6992 8.90518 18.6992 9.31939V9.419C18.6992 14.5829 14.5135 18.7686 9.34961 18.7686C4.18575 18.7686 0 14.5829 0 9.419C1.19209e-07 4.25514 4.18575 0.0693941 9.34961 0.069394H9.44922C9.86343 0.069394 10.1992 0.40518 10.1992 0.819394V1.01861C10.1992 1.43283 9.86343 1.76861 9.44922 1.76861H9.34961C5.12463 1.76861 1.69922 5.19403 1.69922 9.419C1.69922 13.644 5.12463 17.0694 9.34961 17.0694C13.5746 17.0694 17 13.644 17 9.419V9.31939C17 8.90518 17.3358 8.56939 17.75 8.56939H17.9492ZM13.6992 8.56939C14.1134 8.56939 14.4492 8.90518 14.4492 9.31939V9.419C14.4492 12.2357 12.1663 14.5186 9.34961 14.5186C6.53296 14.5186 4.25 12.2357 4.25 9.419C4.25 6.60235 6.53296 4.31939 9.34961 4.31939H9.44922C9.86343 4.31939 10.1992 4.65518 10.1992 5.06939V5.26861C10.1992 5.68283 9.86343 6.01861 9.44922 6.01861H9.34961C7.47184 6.01861 5.94922 7.54124 5.94922 9.419C5.94922 11.2968 7.47184 12.8194 9.34961 12.8194C11.2274 12.8194 12.75 11.2968 12.75 9.419V9.31939C12.75 8.90518 13.0858 8.56939 13.5 8.56939H13.6992ZM15.4482 0.00982367C15.6866 0.0488836 15.8917 0.200707 15.999 0.41705L16.0596 0.539121L16.7822 1.98443L18.2305 2.70904H18.2295L18.3516 2.76959C18.5679 2.87691 18.7197 3.08205 18.7588 3.32037C18.7978 3.55862 18.7195 3.80102 18.5488 3.97174L15.8711 6.64947C15.7304 6.79012 15.5397 6.8692 15.3408 6.8692H13.1016L9.9502 10.0196L9.88379 10.087C9.74356 10.2291 9.55222 10.3098 9.35254 10.3106C9.15273 10.3113 8.96062 10.2322 8.81934 10.0909L8.67773 9.94928C8.53645 9.80799 8.45732 9.61588 8.45801 9.41607C8.45879 9.21639 8.53946 9.02505 8.68164 8.88482L8.75293 8.81451L11.8994 5.66705V3.42779C11.8994 3.22888 11.9785 3.03817 12.1191 2.89752L14.7969 0.219785L14.8643 0.160214C15.0283 0.0314759 15.2398 -0.0242743 15.4482 0.00982367ZM13.3994 3.73834V5.3692H15.0303L16.752 3.64654L15.8877 3.2149C15.7427 3.14231 15.6252 3.02398 15.5527 2.87896L15.1211 2.01568L13.3994 3.73834Z" fill="currentColor"/></svg>`,
+  flash:`<svg viewBox="0 0 15.9005 19.8995" width="100%" height="100%" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"><path d="M8.55681 0.309208C9.24004 -0.361317 10.4119 0.124971 10.4123 1.13147V8.21741H14.798C15.6857 8.21759 16.1872 9.22779 15.7258 9.95569L15.6174 10.1002L7.40837 19.5211C6.73688 20.2917 5.48872 19.8076 5.48845 18.7682V11.6823H1.1027C0.154358 11.6822 -0.353 10.529 0.282391 9.79944L8.49235 0.378544L8.49138 0.377567L8.55681 0.309208ZM8.58415 2.95179L2.53532 9.89515H6.31266C6.81721 9.89535 7.22848 10.3151 7.22868 10.8356V17.0475L7.31657 16.9469L13.3644 10.0045H9.58708C9.08271 10.0041 8.67126 9.58444 8.67106 9.06409V2.8512L8.58415 2.95179Z" fill="currentColor"/></svg>`,
+  chartLine:`<svg viewBox="0 0 18 18" width="100%" height="100%" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"><path d="M13.2469 5.7375C13.5574 5.34939 14.1244 5.28637 14.5125 5.59687C14.9006 5.90738 14.9636 6.47437 14.6531 6.8625L11.0531 11.3625C10.7495 11.742 10.1992 11.8114 9.81035 11.5198L6.9293 9.35947L4.76982 12.2396C4.47163 12.6372 3.90799 12.7179 3.51035 12.4198C3.11275 12.1216 3.03207 11.558 3.33018 11.1604L6.03018 7.56035L6.08906 7.48916C6.3982 7.15388 6.9169 7.10073 7.28965 7.38018L10.1909 9.55635L13.2469 5.7375Z" fill="currentColor"/><path d="M14.1478 1.91725e-07C14.6699 1.91725e-07 15.1195 -0.00037156 15.4872 0.0316408C15.8666 0.0646692 16.243 0.137307 16.6008 0.333985C17.0497 0.580806 17.4192 0.95027 17.666 1.39922C17.8627 1.75697 17.9353 2.13345 17.9684 2.51279C18.0004 2.88053 18 3.3301 18 3.85225V14.1478C18 14.6699 18.0004 15.1195 17.9684 15.4872C17.9353 15.8666 17.8627 16.243 17.666 16.6008C17.4192 17.0497 17.0497 17.4192 16.6008 17.666C16.243 17.8627 15.8666 17.9353 15.4872 17.9684C15.1195 18.0004 14.6699 18 14.1478 18H3.85225C3.3301 18 2.88053 18.0004 2.51279 17.9684C2.13345 17.9353 1.75697 17.8627 1.39922 17.666C0.95027 17.4192 0.580806 17.0497 0.333985 16.6008C0.137307 16.243 0.0646692 15.8666 0.0316408 15.4872C-0.00037157 15.1195 1.9171e-07 14.6699 1.9171e-07 14.1478V3.85225C1.91528e-07 3.3301 -0.00037167 2.88053 0.0316408 2.51279C0.0646692 2.13345 0.137307 1.75697 0.333985 1.39922C0.580806 0.95027 0.95027 0.580806 1.39922 0.333985C1.75697 0.137307 2.13345 0.0646692 2.51279 0.0316408C2.88053 -0.00037168 3.3301 1.91543e-07 3.85225 1.91725e-07H14.1478ZM3.85225 1.8C3.29859 1.8 2.94075 1.801 2.66924 1.82461C2.40944 1.84723 2.31397 1.88565 2.2667 1.91162C2.11704 1.9939 1.9939 2.11704 1.91162 2.2667C1.88565 2.31397 1.84723 2.40944 1.82461 2.66924C1.801 2.94075 1.8 3.29859 1.8 3.85225V14.1478C1.8 14.7014 1.801 15.0593 1.82461 15.3308C1.84723 15.5906 1.88565 15.686 1.91162 15.7333C1.9939 15.883 2.11704 16.0061 2.2667 16.0884C2.31397 16.1143 2.40944 16.1528 2.66924 16.1754C2.94075 16.199 3.29859 16.2 3.85225 16.2H14.1478C14.7014 16.2 15.0593 16.199 15.3308 16.1754C15.5906 16.1528 15.686 16.1143 15.7333 16.0884C15.883 16.0061 16.0061 15.883 16.0884 15.7333C16.1143 15.686 16.1528 15.5906 16.1754 15.3308C16.199 15.0593 16.2 14.7014 16.2 14.1478V3.85225C16.2 3.29859 16.199 2.94075 16.1754 2.66924C16.1528 2.40944 16.1143 2.31397 16.0884 2.2667C16.0061 2.11704 15.883 1.9939 15.7333 1.91162C15.686 1.88565 15.5906 1.84723 15.3308 1.82461C15.0593 1.801 14.7014 1.8 14.1478 1.8H3.85225Z" fill="currentColor"/></svg>`,
+  chartSquarePlus:`<svg viewBox="0 0 19.8496 19.8496" width="100%" height="100%" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"><path d="M0.947266 14.377V10.3984C0.947293 9.88763 1.36127 9.47369 1.87207 9.47363C2.38292 9.47363 2.79685 9.8876 2.79688 10.3984V14.377C2.79688 15.1881 2.79808 15.7414 2.83301 16.1689C2.86705 16.5855 2.92851 16.8013 3.00586 16.9531C3.18965 17.3138 3.48306 17.6072 3.84375 17.791C3.99556 17.8684 4.21138 17.9298 4.62793 17.9639C5.05545 17.9988 5.60879 18 6.41992 18H14.377C15.1881 18 15.7414 17.9988 16.1689 17.9639C16.5856 17.9298 16.8013 17.8684 16.9531 17.791C17.3139 17.6072 17.6072 17.3139 17.791 16.9531C17.8684 16.8013 17.9298 16.5856 17.9639 16.1689C17.9988 15.7414 18 15.1881 18 14.377V6.41992C18 5.60879 17.9988 5.05545 17.9639 4.62793C17.9298 4.21138 17.8684 3.99556 17.791 3.84375C17.6072 3.48306 17.3138 3.18965 16.9531 3.00586C16.8013 2.92851 16.5855 2.86705 16.1689 2.83301C15.7414 2.79808 15.1881 2.79688 14.377 2.79688H10.3984C9.8876 2.79685 9.47363 2.38292 9.47363 1.87207C9.47369 1.36127 9.88763 0.947293 10.3984 0.947266H14.377C15.1575 0.947266 15.799 0.946752 16.3193 0.989258C16.8504 1.03265 17.3369 1.12506 17.793 1.35742C18.5018 1.71858 19.0783 2.29509 19.4395 3.00391C19.6719 3.46001 19.7642 3.94642 19.8076 4.47754C19.8501 4.99787 19.8496 5.63932 19.8496 6.41992V14.377C19.8496 15.1575 19.8501 15.799 19.8076 16.3193C19.7642 16.8504 19.6718 17.3369 19.4395 17.793C19.0783 18.5018 18.5018 19.0783 17.793 19.4395C17.3369 19.6718 16.8504 19.7642 16.3193 19.8076C15.799 19.8501 15.1575 19.8496 14.377 19.8496H6.41992C5.63932 19.8496 4.99787 19.8501 4.47754 19.8076C3.94642 19.7642 3.46001 19.6719 3.00391 19.4395C2.29509 19.0783 1.71858 18.5018 1.35742 17.793C1.12506 17.3369 1.03265 16.8504 0.989258 16.3193C0.946752 15.799 0.947266 15.1575 0.947266 14.377ZM5.68359 15.1357V11.3457C5.68368 10.8349 6.09856 10.4209 6.60938 10.4209C7.12002 10.4211 7.5341 10.835 7.53418 11.3457V15.1357C7.53396 15.6463 7.11994 16.0604 6.60938 16.0605C6.09865 16.0605 5.68382 15.6464 5.68359 15.1357ZM9.47363 15.1357V5.66211C9.47363 5.15126 9.8876 4.73636 10.3984 4.73633C10.9093 4.73633 11.3232 5.15125 11.3232 5.66211V15.1357C11.323 15.6464 10.9092 16.0605 10.3984 16.0605C9.88773 16.0605 9.47385 15.6464 9.47363 15.1357ZM13.2627 15.1357V9.45117C13.2627 8.94046 13.6768 8.52662 14.1875 8.52637C14.6984 8.52637 15.1133 8.94031 15.1133 9.45117V15.1357C15.1131 15.6464 14.6982 16.0605 14.1875 16.0605C13.677 16.0603 13.2629 15.6463 13.2627 15.1357ZM2.8418 6.60938V4.69238H0.924805C0.413941 4.69238 0 4.27746 0 3.7666C0.000166727 3.25588 0.414044 2.8418 0.924805 2.8418H2.8418V0.924805C2.8418 0.414044 3.25588 0.000166727 3.7666 0C4.27746 0 4.69238 0.413941 4.69238 0.924805V2.8418H6.60938C7.11997 2.84199 7.53401 3.256 7.53418 3.7666C7.53418 4.27735 7.12007 4.69219 6.60938 4.69238H4.69238V6.60938C4.69219 7.12007 4.27735 7.53418 3.7666 7.53418C3.256 7.53401 2.84199 7.11997 2.8418 6.60938Z" fill="currentColor"/></svg>`,
+  megaphone_tb:`<svg viewBox="0 0 17.4121 18.4374" width="100%" height="100%" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"><path d="M15.3965 0.0145035C15.7332 -0.0288354 16.0761 0.025538 16.3838 0.169777C16.691 0.313912 16.9508 0.542634 17.1328 0.828957C17.3149 1.11558 17.4122 1.44859 17.4121 1.78794V14.5301L17.4072 14.6571C17.3864 14.9523 17.2922 15.2391 17.1328 15.4901C16.9508 15.7764 16.691 16.0052 16.3838 16.1493C16.0763 16.2934 15.7334 16.346 15.3965 16.3026C15.0598 16.2592 14.7422 16.1221 14.4814 15.9051L10.002 12.1717L9.97363 12.1483H9.02637V16.5458C9.0263 17.0474 8.82639 17.5289 8.47168 17.8836C8.11692 18.2383 7.63543 18.4374 7.13379 18.4374H6.08594C5.58439 18.4374 5.10278 18.2382 4.74805 17.8836C4.39334 17.5289 4.19342 17.0474 4.19336 16.5458V12.1483H1.89258C1.39089 12.1483 0.909452 11.9484 0.554688 11.5936C0.200003 11.2389 1.38255e-05 10.7574 0 10.2557V6.06333C0 5.56171 0.200025 5.08019 0.554688 4.72544C0.909453 4.37068 1.39087 4.17075 1.89258 4.17075H9.97363L10.002 4.14732L14.4775 0.415871L14.4785 0.416847L14.5811 0.336769C14.8214 0.163931 15.1017 0.0524606 15.3965 0.0145035ZM5.88086 12.1483V16.5458C5.88092 16.6004 5.90333 16.6522 5.94141 16.6903C5.97944 16.7282 6.03128 16.7499 6.08594 16.7499H7.13379C7.18854 16.7499 7.24026 16.7283 7.27832 16.6903C7.3164 16.6522 7.33783 16.6004 7.33789 16.5458V12.1483H5.88086ZM10.8184 5.66294C10.6667 5.7892 10.4754 5.85825 10.2783 5.85825H9.02637V10.4608H10.2783C10.4754 10.4608 10.6667 10.5298 10.8184 10.6561L15.7246 14.743V1.57407L10.8184 5.66294ZM1.89258 5.85825C1.83781 5.85825 1.78614 5.8807 1.74805 5.9188C1.71008 5.95685 1.68848 6.0086 1.68848 6.06333V10.2557C1.68851 10.3103 1.71 10.3621 1.74805 10.4002C1.78611 10.4383 1.8378 10.4608 1.89258 10.4608H7.33789V5.85825H1.89258Z" fill="currentColor"/></svg>`,
+  calendar_tb:`<svg viewBox="0 0 16.8 16.8" width="100%" height="100%" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"><path d="M11.76 0C12.2239 0 12.6 0.376081 12.6 0.84V2.52H14.7C15.8598 2.52 16.8 3.4602 16.8 4.62V14.7C16.8 15.8598 15.8598 16.8 14.7 16.8H2.1C0.940202 16.8 1.0147e-08 15.8598 0 14.7V4.62C1.62355e-07 3.4602 0.940202 2.52 2.1 2.52H4.2V0.84C4.2 0.376081 4.57608 0 5.04 0C5.50392 0 5.88 0.376081 5.88 0.84V2.52H10.92V0.84C10.92 0.376081 11.2961 0 11.76 0ZM1.68 14.7C1.68 14.932 1.86804 15.12 2.1 15.12H14.7C14.932 15.12 15.12 14.932 15.12 14.7V8.4H1.68V14.7ZM2.1 4.2C1.86804 4.2 1.68 4.38804 1.68 4.62V6.72H15.12V4.62C15.12 4.38804 14.932 4.2 14.7 4.2H2.1Z" fill="currentColor"/></svg>`,
+  map:`<svg viewBox="0 0 19.1543 18.2852" width="100%" height="100%" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"><path d="M6.55469 0C6.90542 0 7.23316 0.0930074 7.53516 0.27832L12.4639 3.29395L17.3066 0.617188C17.4472 0.536932 17.5805 0.476088 17.7051 0.43457C17.8312 0.392564 17.9556 0.371094 18.0781 0.371094C18.4098 0.371094 18.68 0.464564 18.873 0.665039C19.0652 0.864626 19.1543 1.13998 19.1543 1.47656V13.9082C19.1543 14.2214 19.0898 14.4937 18.9551 14.7207C18.8591 14.8906 18.7213 15.0401 18.5439 15.1699L18.3525 15.2939L13.5479 18.0283C13.2527 18.1998 12.9327 18.2852 12.5898 18.2852C12.2388 18.2852 11.8905 18.1891 11.5459 18L11.5439 17.999L6.51367 15.1357L1.84668 17.6777L1.8457 17.6787C1.70535 17.7522 1.57256 17.8095 1.44922 17.8506L1.44824 17.8496C1.32288 17.8977 1.19906 17.9238 1.07617 17.9238C0.750162 17.9238 0.481883 17.8295 0.283203 17.6309L0.28125 17.6299C0.0884605 17.4296 0 17.1471 0 16.7988V4.38672C0 4.07437 0.0610126 3.8028 0.188477 3.57617L0.189453 3.57422C0.324118 3.34742 0.531188 3.15965 0.803711 3.00977L5.54785 0.276367C5.85605 0.0918521 6.19238 0 6.55469 0ZM17.5801 2.29883C17.5623 2.29883 17.5327 2.3059 17.4883 2.32812L17.4873 2.32715L13.2852 4.62207V16.375C13.2995 16.3671 13.3147 16.3602 13.3291 16.3516L13.333 16.3496C13.4055 16.3101 13.4748 16.2734 13.541 16.2402L17.3535 14.0078C17.4542 13.9486 17.5165 13.8879 17.5508 13.8301C17.587 13.7623 17.6074 13.682 17.6074 13.5859V2.3457C17.6074 2.31998 17.6007 2.31164 17.5977 2.30859L17.5918 2.30371L17.5889 2.2998C17.5872 2.29948 17.5844 2.29883 17.5801 2.29883ZM7.42578 13.7715L11.498 16.1113L11.6875 16.2012L11.6943 16.2051L11.7383 16.2285V4.69629L7.55762 2.14746L7.55078 2.14453C7.5124 2.11717 7.47141 2.0945 7.42773 2.07812L7.42578 2.07715V13.7715ZM5.86523 1.91309L5.85742 1.91797C5.80681 1.94327 5.75282 1.97196 5.69531 2.00391L5.69434 2.00293L1.79199 4.28516L1.79297 4.28613C1.7013 4.34347 1.64104 4.40536 1.60547 4.46973C1.5741 4.53858 1.55664 4.62084 1.55664 4.71875V15.9395C1.55664 15.9781 1.56498 15.9911 1.56641 15.9932C1.56778 15.9937 1.5729 15.9961 1.58398 15.9961C1.58394 15.9961 1.58632 15.9961 1.59082 15.9951C1.59524 15.9942 1.6016 15.992 1.60938 15.9893C1.62542 15.9835 1.6459 15.9734 1.67188 15.959L5.87891 13.6436V1.90527C5.8745 1.90795 5.86959 1.91037 5.86523 1.91309Z" fill="currentColor"/></svg>`,
+};
+
+/* инъекция инлайн-SVG в перекрашиваемые глифы */
+document.querySelectorAll('.g[data-ic]').forEach(el=>{
+  const svg=window.ICONS[el.dataset.ic];
+  if(svg) el.innerHTML=svg;
+});
+
+/* ============================================================
+   Limex Main Screen — компоненты (vanilla JS). Базовый интерактив + состояния.
+   ============================================================ */
+class Bus{constructor(){this._={}}on(e,f){(this._[e]||(this._[e]=[])).push(f);return this}emit(e,d){(this._[e]||[]).forEach(f=>f(d))}}
+
+class Sidebar{
+  constructor(root,bus){
+    this.root=root;this.bus=bus;
+    this.items=[...root.querySelectorAll('.sb-item, .sb-avatar')];
+    this.items.forEach(el=>el.addEventListener('click',()=>this.select(el.dataset.nav)));
+    this.setActive('ai');
+  }
+  setActive(name){
+    this.active=name;
+    this.items.forEach(el=>{const g=el.querySelector('.g');if(g)g.classList.toggle('violet',el.dataset.nav===name);});
+  }
+  select(name){this.setActive(name);this.bus.emit('sidebar:select',name);}
+}
+
+class Toolbar{
+  constructor(root,bus){
+    this.root=root;this.bus=bus;
+    this.btns=[...root.querySelectorAll('.tb-btn')];
+    this.btns.forEach(b=>b.addEventListener('click',()=>this.setTool(b.dataset.tool,true)));
+    this.setTool('cursor');
+  }
+  setTool(name,emit){
+    this.tool=name;
+    this.btns.forEach(b=>{const g=b.querySelector('.g');if(g)g.classList.toggle('violet',b.dataset.tool===name);});
+    if(emit)this.bus.emit('toolbar:tool',name);
+  }
+}
+
+class Board{
+  constructor(root,bus){this.root=root;this.bus=bus;this.tool='cursor';bus.on('toolbar:tool',t=>this.setTool(t));}
+  setTool(name){this.tool=name;this.root.dataset.tool=name;this.bus.emit('board:tool',name);}
+}
+
+class AiChat{
+  constructor(root,bus){
+    this.root=root;this.bus=bus;this.state='empty';
+    this.ce=root.querySelector('.ce');
+    this.modelBtn=root.querySelector('.model-btn');
+    this.modelMenu=root.querySelector('.model-menu');
+    this.modelLabel=root.querySelector('.model-label');
+    this.log=root.querySelector('.conv-log');
+    this.qPanel=root.querySelector('.q-panel');
+    this._wire();this.setState('empty');
+  }
+  _wire(){
+    this.root.querySelectorAll('.sg-row').forEach(row=>{
+      row.addEventListener('click',()=>{const t=row.querySelector('p').textContent.trim();this.fillInput(t);this.bus.emit('aichat:suggestion',t);});
+    });
+    this.ce.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();this.send();}});
+    this.ce.addEventListener('input',()=>this.bus.emit('aichat:input'));   // реальный ввод (programmatic textContent не триггерит)
+    this.modelBtn.addEventListener('click',e=>{if(e.target.closest('.model-menu'))return;e.stopPropagation();this.toggleModel();});
+    this.modelMenu.querySelectorAll('.model-opt').forEach(opt=>{opt.addEventListener('click',e=>{e.stopPropagation();this.setModel(opt.dataset.model);});});
+    document.addEventListener('click',()=>this.toggleModel(false));
+    this.root.querySelector('[data-act="new"]').addEventListener('click',()=>this.reset());
+    this.root.querySelectorAll('[data-act="attach"],[data-act="mic"],[data-act="add"],[data-act="expand"],[data-act="folder"]')
+      .forEach(b=>b.addEventListener('click',()=>this.bus.emit('aichat:action',b.dataset.act)));
+    this.root.querySelector('.more').addEventListener('click',()=>this.bus.emit('aichat:action','disclaimer'));
+  }
+  fillInput(text){this.ce.textContent=text;this.focusEnd();}
+  focusEnd(){this.ce.focus();const r=document.createRange();r.selectNodeContents(this.ce);r.collapse(false);const s=getSelection();s.removeAllRanges();s.addRange(r);}
+  get value(){return this.ce.textContent.trim();}
+  send(){const t=this.value;if(!t)return;this.ce.textContent='';this.bus.emit('aichat:send',t);return t;}
+  sendText(t){if(!t)return;this.ce.textContent='';this.bus.emit('aichat:send',t);return t;}  // отправить готовый текст (клик по body-чипу)
+  toggleModel(force){const open=force===undefined?!this.modelMenu.classList.contains('open'):force;this.modelMenu.classList.toggle('open',open);this.modelBtn.classList.toggle('open',open);}
+  setModel(name){this.modelLabel.textContent=name;this.modelMenu.querySelectorAll('.model-opt').forEach(o=>o.classList.toggle('sel',o.dataset.model===name));this.toggleModel(false);this.bus.emit('aichat:model',name);}
+  /* ——— Empty State Active: чип-тост над гридом → свечение по обводке → искры → садится первой строкой списка ——— */
+  playActiveSuggest(text,onClick){
+    const grid=this.root.querySelector('.sg-items');this.clearActiveSuggest();
+    const row=document.createElement('div');row.className='sg-row act';
+    row.innerHTML='<p></p><span class="ic"><img src="assets/chevronRight.svg" style="top:20.67%;left:33.32%;width:33.27%;height:58.58%"></span>'
+      +'<span class="act-fx"><svg viewBox="0 0 432 40" preserveAspectRatio="none"><defs>'
+      +'<linearGradient id="bg-grad-as" x1="0" y1="0" x2="432" y2="40" gradientUnits="userSpaceOnUse"><stop stop-color="#ffffff" stop-opacity="0.12"/><stop offset="1" stop-color="#8A7CF8"/></linearGradient>'
+      +'<filter id="glow-as" x="-20%" y="-60%" width="140%" height="220%"><feGaussianBlur stdDeviation="1.6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>'
+      +'<rect class="border-static" x="0.5" y="0.5" width="431" height="39" rx="3"/>'
+      +'<rect class="border-glow" x="0.5" y="0.5" width="431" height="39" rx="3"/></svg></span>';
+    row.querySelector('p').textContent=text;
+    row.onclick=()=>{this.bus.emit('aichat:chip',text);onClick&&onClick();};
+    // фиксируем высоту блока на текущих строках → новая строка СДВИГАЕТ список вниз, последняя скрывается (блок не растёт)
+    grid.style.height=grid.offsetHeight+'px';
+    grid.insertBefore(row,grid.firstChild);   // активный саджест — первой строкой
+    this._actRow=row;
+    const glow=row.querySelector('.border-glow');
+    this._actT=[];const at=(m,f)=>this._actT.push(setTimeout(f,m));
+    void row.offsetWidth;
+    at(60,  ()=>row.classList.add('in'));                 // появляется первой строкой (сдвигает список)
+    at(750, ()=>glow.classList.add('run'));               // свечение по обводке (по контуру, не по тексту)
+    at(1500,()=>this._actSparks(row));                    // искры
+    at(2300,()=>row.classList.add('settle'));             // растворяется в обычную строку
+    at(2950,()=>{ if(!this._actRow)return; row.classList.remove('act');
+                  const fx=row.querySelector('.act-fx'); if(fx)fx.remove(); });
+  }
+  _actSparks(row){
+    // искры выносим в слой над строкой: у .sg-row / .sg-items стоит overflow:hidden и иначе обрезает «фейерверк»
+    const conv=this.root.querySelector('.conv');if(!conv)return;
+    const layer=document.createElement('div');layer.className='spark-layer';
+    layer.style.cssText='position:absolute;left:'+row.offsetLeft+'px;top:'+row.offsetTop+'px;width:'+row.offsetWidth+'px;height:'+row.offsetHeight+'px;overflow:visible;pointer-events:none;z-index:7;';
+    conv.appendChild(layer);this._actLayer=layer;
+    const mk=(x,y,c,sz,dx,dy)=>{const s=document.createElement('div');s.className='act-spark';
+      s.style.cssText='left:'+x+';top:'+y+';width:'+sz+'px;height:'+sz+'px;background:'+c+';';
+      s.style.setProperty('--dx',dx+'px');s.style.setProperty('--dy',dy+'px');
+      if(c!=='#ffffff')s.style.boxShadow='0 0 6px 1px rgba(138,124,248,.85)';layer.appendChild(s);};
+    mk('2px','28%','#ffffff',4,-9,6);mk('6px','58%','#ffffff',4,-6,-7);mk('2px','82%','#8A7CF8',4,-7,7);
+    mk('calc(100% - 6px)','24%','#8A7CF8',5,9,-8);mk('calc(100% - 6px)','60%','#ffffff',4,6,7);mk('calc(100% - 6px)','84%','#8A7CF8',4,7,-8);
+    requestAnimationFrame(()=>layer.querySelectorAll('.act-spark').forEach(s=>s.classList.add('go')));
+    this._actT.push(setTimeout(()=>{if(this._actLayer===layer){layer.remove();this._actLayer=null;}},900));
+  }
+  clearActiveSuggest(){(this._actT||[]).forEach(clearTimeout);this._actT=[];const g=this.root.querySelector('.sg-items');if(g)g.style.height='';if(this._actLayer){this._actLayer.remove();this._actLayer=null;}if(this._actRow){this._actRow.remove();this._actRow=null;}}
+  reset(){this.ce.textContent='';this.clearChips();this.clearActiveSuggest();this.hideThinking();this.hideSysTip();if(this.log)this.log.innerHTML='';this.setState('empty');this.bus.emit('aichat:reset');}
+  setState(s){this.state=s;this.root.dataset.state=s;}
+  /* ——— лента диалога (S3+) ——— */
+  addUserMessage(text){
+    const m=document.createElement('div');m.className='msg-user';
+    m.innerHTML='<div class="bubble"></div><span class="ic edit"><img src="assets/editNote.svg"></span>';
+    m.querySelector('.bubble').textContent=text;
+    this.log.appendChild(m);this.scrollLog();
+  }
+  addAiMessage(text){const m=document.createElement('div');m.className='msg-ai';m.textContent=text;this.log.appendChild(m);this.scrollLog();}
+  scrollLog(){const c=this.root.querySelector('.conv');if(c)c.scrollTop=c.scrollHeight;}
+  showThinking(){this.hideThinking();const t=document.createElement('div');t.className='thinking';t.innerHTML='<span>Думает</span><span class="dots"><i></i><i></i><i></i></span>';this.log.appendChild(t);this._think=t;this.scrollLog();}
+  hideThinking(){if(this._think){this._think.remove();this._think=null;}}
+  /* ——— Questionary (S3) ——— */
+  showQuestionary(cfg){
+    const p=this.qPanel;
+    p.querySelector('.q-title-text').textContent=cfg.title;
+    p.querySelector('.q-prog').textContent=cfg.progress||'';
+    const opts=p.querySelector('[data-q-opts]');opts.innerHTML='';this._qans=null;
+    (cfg.options||[]).forEach(o=>{
+      const el=document.createElement('div');el.className='q-opt';
+      el.innerHTML='<span class="q-radio"></span><span class="q-label"></span>';
+      el.querySelector('.q-label').textContent=o;
+      el.addEventListener('click',()=>{
+        p.querySelectorAll('.q-opt,.q-own').forEach(x=>x.classList.remove('sel'));
+        el.classList.add('sel');this._qans=o;
+      });
+      opts.appendChild(el);
+    });
+    const own=p.querySelector('.q-own'),field=p.querySelector('.q-field');
+    field.textContent='';
+    field.onfocus=()=>{p.querySelectorAll('.q-opt,.q-own').forEach(x=>x.classList.remove('sel'));own.classList.add('sel');};
+    field.oninput=()=>{this._qans=field.textContent.trim();};
+    p.querySelector('.q-next').onclick=()=>{cfg.onNext&&cfg.onNext(this._qans);};
+    p.querySelector('.q-back').onclick=()=>{cfg.onBack&&cfg.onBack();};
+    this.setState('questionary');
+  }
+  hideQuestionary(){if(this.state==='questionary')this.setState('conversation');}
+  /* ——— Dialog Tooltip System (S5/S6) —————————————————————————
+     - примагничивается стрелкой к иконке меню (cfg.anchorSel)
+     - закрывается ТОЛЬКО по крестику
+     - сам уходит через cfg.timeoutMs (важное сообщение) ——————————— */
+  showSysTip(cfg){
+    const t=document.querySelector('.sys-tip');
+    const stage=document.getElementById('stage');
+    const icon=t.querySelector('.tip-icon');
+    if(cfg.icon){icon.src='assets/'+cfg.icon;icon.style.display='block';}else{icon.style.display='none';}
+    t.querySelector('.tip-title').textContent=cfg.title||'';
+    t.querySelector('.tip-body').textContent=cfg.body||'';
+    t.classList.remove('leaving');t.classList.add('show');
+    void t.offsetWidth;
+    // позиционируем справа от иконки меню; стрелка-кончик указывает на иконку
+    const anchorEl=cfg.anchorSel?document.querySelector(cfg.anchorSel):null;
+    if(anchorEl){
+      const sr=stage.getBoundingClientRect(),ar=anchorEl.getBoundingClientRect();
+      const sc=sr.width/1440||1;
+      const gap=10;
+      const left=(ar.right-sr.left)/sc+gap;                 // справа от иконки
+      const iconMidY=(ar.top+ar.height/2-sr.top)/sc;        // вертикальный центр иконки
+      const th=t.offsetHeight;
+      let top=iconMidY-th/2;                                 // тултип по центру иконки
+      top=Math.max(8,Math.min(top,848-th-8));
+      t.style.left=Math.round(left)+'px';
+      t.style.top=Math.round(top)+'px';
+      // стрелка — по вертикальному центру тултипа (CSS), тултип центрируем по иконке → кончик указывает на неё
+    }
+    const dismiss=(byUser)=>{this.hideSysTip();cfg.onDismiss&&cfg.onDismiss(byUser);};
+    t.querySelector('.tip-close').onclick=(e)=>{e.stopPropagation();dismiss(true);};  // закрытие — только по крестику
+    t.onclick=null;                                                                   // клик по телу НЕ закрывает
+    clearTimeout(this._tipTo);
+    if(cfg.timeoutMs)this._tipTo=setTimeout(()=>dismiss(false),cfg.timeoutMs);        // авто-уход, если не закрыли
+    this._tipDismiss=dismiss;
+  }
+  hideSysTip(){const t=document.querySelector('.sys-tip');clearTimeout(this._tipTo);if(!t||!t.classList.contains('show'))return;t.classList.add('leaving');t.classList.remove('show');setTimeout(()=>t.classList.remove('leaving'),160);}
+  /* ——— чип-саджест (S1/S2/S9) ——— */
+  showChip(text,opts={}){
+    const layer=this.root.querySelector('[data-chip-layer]');
+    this.hideChip();
+    const chip=document.createElement('div');
+    chip.className='chip enter'+(opts.idle?' idle':'');
+    chip.innerHTML='<span class="chip-text"></span><span class="ic"><img src="assets/chevronRight.svg" style="top:20.67%;left:33.32%;width:33.27%;height:58.58%"></span>';
+    chip.querySelector('.chip-text').textContent=text;
+    chip.addEventListener('click',()=>{this.bus.emit('aichat:chip',text);opts.onClick&&opts.onClick();});
+    layer.appendChild(chip);this._chip=chip;
+    return chip;
+  }
+  hideChip(){const c=this._chip;if(!c)return;this._chip=null;c.classList.add('leaving');setTimeout(()=>c.remove(),180);}
+  clearChips(){const l=this.root.querySelector('[data-chip-layer]');if(l){l.innerHTML='';l.classList.remove('body-row');}this._chip=null;}
+  /* ——— Body State: готовые ответы горизонтальным рядом над инпутом (не перекрывают инпут) ——— */
+  showChips(items,opts={}){
+    const layer=this.root.querySelector('[data-chip-layer]');
+    layer.innerHTML='';this._chip=null;layer.classList.add('body-row');
+    const scroll=document.createElement('div');scroll.className='chips-scroll';
+    items.forEach((t,i)=>{
+      const chip=document.createElement('div');chip.className='chip enter';chip.style.animationDelay=(i*50)+'ms';
+      chip.innerHTML='<span class="chip-text"></span><span class="ic"><img src="assets/chevronRight.svg" style="top:20.67%;left:33.32%;width:33.27%;height:58.58%"></span>';
+      chip.querySelector('.chip-text').textContent=t;
+      chip.addEventListener('click',()=>{(opts.onPick?opts.onPick:(x)=>this.fillInput(x))(t);});
+      scroll.appendChild(chip);
+    });
+    layer.appendChild(scroll);
+    // кнопка обновления подсказок — закреплена справа (как в макете)
+    const ref=document.createElement('div');ref.className='chip-refresh enter';ref.style.animationDelay=(items.length*50)+'ms';
+    ref.textContent='↻';ref.title='Обновить подсказки';
+    ref.addEventListener('click',()=>{opts.onRefresh&&opts.onRefresh();});
+    layer.appendChild(ref);
+  }
+}
+
+const bus=new Bus();
+const app={
+  bus,
+  board  : new Board(document.querySelector('[data-component="board"]'),bus),
+  sidebar: new Sidebar(document.querySelector('[data-component="sidebar"]'),bus),
+  toolbar: new Toolbar(document.querySelector('[data-component="toolbar"]'),bus),
+  aichat : new AiChat(document.querySelector('[data-component="aichat"]'),bus),
+};
+window.app=app;  // из консоли: app.toolbar.setTool('sticky'), app.aichat.setState('questionary')…
+
+/* ============================================================
+   SceneEngine — таймлайн сценария «Утро + Рутина» (S1–S10).
+   Сейчас собран Момент 1 (S1→S2→вход в S3). Остальное — TODO по плану.
+   Правила §4: один сигнал на экране; idle-чип уходит по действию и не повторяется.
+   ============================================================ */
+const SCENE = {
+  // бриф §6: idle = 45000ms. Для просматриваемого демо/GIF ускорено. Реальное значение в комментарии.
+  idleMs: 2500,        /* демо; док: 30–60с бездействия */
+  thinkMs: 1200,       /* §6 thinkingMs */
+};
+class SceneEngine{
+  constructor(app){
+    this.app=app;this.chat=app.aichat;this.bus=app.bus;
+    this.step=null;this._idle=null;this._ignoredS2=false;
+    // UI чистый (по брифу §7: автоплей + клики по чипам). Управление для разбора — скрытые хоткеи: R — сначала, N — следующий шаг.
+    document.addEventListener('keydown',e=>{
+      if(e.target&&e.target.isContentEditable)return;
+      if(e.key==='r'||e.key==='R')this.restart();
+      if(e.key==='n'||e.key==='N')this.next();
+    });
+    // запоминаем текст чипа, по которому пошли в S3 (станет сообщением юзера)
+    this.bus.on('aichat:chip',(t)=>{this._chipText=t;});
+    // §4: чип уходит, как только юзер начал действовать сам (ввод текста / клик по подсказке)
+    this.bus.on('aichat:input',()=>this.onUserAct());
+    this.bus.on('aichat:suggestion',()=>this.onUserAct());
+    // отправка собранной идеи → S5 (риск). §6: trigger B8.
+    this.bus.on('aichat:send',(t)=>{this._sentText=t;if(['S4','conversation','engaged'].includes(this.step))this.go('S5');});
+    // Active Point реагирует на курсор; _mode — режим «Активный AI» включён (постоянный, до выключения)
+    this._cursor=null;this._apFollow=false;this._mode=false;
+    const stage=document.getElementById('stage');
+    stage.addEventListener('mousemove',(e)=>{
+      const r=stage.getBoundingClientRect();const sc=r.width/1440||1;
+      this._cursor={x:(e.clientX-r.left)/sc,y:(e.clientY-r.top)/sc};
+      if(this._mode)this._modeFollow();                     // режим включён → точка появляется на доске (фиксированно, не следует)
+    });
+  }
+  _placeApAtCursor(){
+    const ap=document.querySelector('[data-ap]');if(!ap||!this._cursor)return;
+    let x=this._cursor.x-5,y=this._cursor.y-5;           // точка по центру курсора
+    x=Math.max(8,Math.min(x,1440-360));                  // чтобы инпут-поп-ап не вылез за край
+    y=Math.max(60,Math.min(y,848-90));
+    ap.style.left=Math.round(x)+'px';ap.style.top=Math.round(y)+'px';
+  }
+  onUserAct(){
+    if(this.step!=='S1'&&this.step!=='S2')return;
+    this.clearIdle();this._ignoredS2=true;   // не показываем и не повторяем idle-сигнал
+    this.chat.hideChip();this.chat.clearActiveSuggest();this.step='engaged';
+    this.setLabel('Юзер вводит сам — сигнал убран (§4: chipExitOnUserAction)');
+  }
+  setLabel(t){this.stepLabel=t;}   // только для отладки (window.app.scene.stepLabel), без UI
+  clearIdle(){if(this._idle){clearTimeout(this._idle);this._idle=null;}}
+
+  start(){this.restart();}
+  restart(){
+    this.clearIdle();
+    this.resetLayers();          // карточка / active point / toast — сброс
+    this.chat.reset();           // empty
+    this.go('A1');
+  }
+  /* ——— A1 · Empty State — пауза бездействия ——— */
+  A1(){
+    this.setLabel('A1 · Empty State (бездействие)');
+    this.chat.hideChip();
+    this._idle=setTimeout(()=>this.go('A2'), SCENE.idleMs);   // §6: idle (демо ускорено)
+  }
+  /* ——— A2 · Active Point: карточка «достаётся» → точка у курсора → пульс + хинт → клик → инпут → «Отправить» → чат ——— */
+  A2(){
+    this.setLabel('A2 · Active Point Mode — предложение включить режим');
+    this.showOffer();   // точка + тултип «Включить Активное AI?»
+  }
+  /* отправка запроса из инпута → в чат; РЕЖИМ НЕ ВЫКЛЮЧАЕТСЯ (точка вернётся при наведении на доску) */
+  sendPrompt(q){
+    if(!q)return;
+    this.step='A2done';
+    const ap=document.querySelector('[data-ap]');
+    ap.classList.remove('input-mode','show');     // инпут и точка скрываются; бейдж и режим остаются
+    this.openChat();                               // чат выезжает слева
+    this.chat.addUserMessage(q);
+    this.chat.setState('conversation');
+    this.chat.showThinking();
+    setTimeout(()=>{ this.chat.hideThinking();
+      this.chat.addAiMessage('Ответ на вопрос в каком-то количестве текста\n\nПосмотреть больше информации по теме?');
+      this.showSuggestChips();
+    }, SCENE.thinkMs);
+  }
+  openChat(){document.querySelector('.chat').classList.add('show');}   /* доска НЕ затемняется/не блокируется — чат просто выезжает */
+  closeChat(){document.querySelector('.chat').classList.remove('show');document.querySelector('[data-dim]').classList.remove('show');const l=document.querySelector('[data-chip-layer]');if(l)l.innerHTML='';}
+  showBadge(){const b=document.querySelector('[data-badge]');b.classList.add('show');b.querySelector('.bd-x').onclick=()=>this.disableMode();}
+  hideBadge(){document.querySelector('[data-badge]').classList.remove('show');}
+  showSuggestChips(){const l=document.querySelector('[data-chip-layer]');if(!l)return;
+    l.innerHTML='<div class="ap-suggest"><span class="sg-chip">Больше информации</span><span class="sg-chip">Запусти претрейд по рынку сегодня</span></div>';}
+  /* === вспомогательные слои сцены === */
+  showCard(){document.querySelector('[data-card]').classList.add('show');}
+  hideCard(){const c=document.querySelector('[data-card]');c.classList.remove('show');c.classList.remove('highlight');}
+  highlightCard(on){document.querySelector('[data-card]').classList.toggle('highlight',on!==false);}
+  /* предложение включить режим: точка появляется НА МЕСТЕ (пульсирует, не следует за курсором) → тултип «Включить Активное AI?» → клик */
+  showOffer(){
+    const ap=document.querySelector('[data-ap]');const bubble=ap.querySelector('.ap-bubble');
+    ap.classList.remove('input-mode');this.hideBadge();
+    bubble.querySelector('.apb-text').textContent='Включить Активное AI?';bubble.classList.remove('in');
+    ap.querySelector('.ap-input-text').textContent='';
+    if(this._cursor){this._placeApAtCursor();}else{ap.style.left='1074px';ap.style.top='187px';}
+    this._apFollow=false;ap.classList.add('show');           // фиксирована на месте появления, только пульсирует
+    clearTimeout(this._apTo);
+    this._apTo=setTimeout(()=>bubble.classList.add('in'),700);  // СНАЧАЛА тултип, потом клик
+    const enable=()=>this.enableMode();
+    ap.querySelector('.ap-dot').onclick=enable;
+    bubble.querySelector('.apb-text').onclick=enable;
+    bubble.querySelector('.apb-v').onclick=enable;
+    bubble.querySelector('.apb-x').onclick=(e)=>{e.stopPropagation();this.hidePoint();};   // отклонить предложение
+  }
+  /* включить режим: бейдж «Активный AI» (постоянный) + открыть поле ввода у точки */
+  enableMode(){this._mode=true;this.showBadge();this._openInput();}
+  /* поле ввода у точки: фокус, пустое; юзер сам печатает и отправляет. Режим при этом остаётся включённым */
+  _openInput(){
+    const ap=document.querySelector('[data-ap]');const field=ap.querySelector('.ap-input-text');
+    this._apFollow=false;clearTimeout(this._apTo);
+    ap.classList.add('show');ap.querySelector('.ap-bubble').classList.remove('in');
+    ap.classList.add('input-mode');field.textContent='';this.focusField(field);
+    const send=()=>this.sendPrompt(field.textContent.trim());
+    field.onkeydown=(e)=>{if(e.key==='Enter'){e.preventDefault();send();}};
+    ap.querySelector('.ap-send').onclick=send;
+    ap.querySelector('.ap-input-close').onclick=()=>{ap.classList.remove('input-mode','show');};  // отмена ввода; режим остаётся
+  }
+  /* режим включён: курсор зашёл на доску → точка появляется на месте (фиксированно) + тултип; уход с доски — скрывает; повторный заход — снова */
+  _modeFollow(){
+    const ap=document.querySelector('[data-ap]');
+    if(ap.classList.contains('input-mode'))return;            // сейчас вводят — не трогаем
+    const chatOpen=document.querySelector('.chat').classList.contains('show');
+    const boardLeft=chatOpen?528:48;                          // доска — правее чата/сайдбара
+    const onBoard=this._cursor&&this._cursor.x>boardLeft+8;
+    if(onBoard){
+      if(!ap.classList.contains('show'))this._reArm();        // зашёл на доску → точка появляется (фиксированно) + тултип
+    }else if(ap.classList.contains('show')){
+      this.hidePoint();                                       // ушёл с доски → скрыть точку и тултип (режим жив)
+    }
+  }
+  /* в режиме: точка появляется НА МЕСТЕ (пульсирует, не следует) → тултип → клик открывает поле ввода к этому месту доски */
+  _reArm(){
+    const ap=document.querySelector('[data-ap]');const bubble=ap.querySelector('.ap-bubble');
+    bubble.querySelector('.apb-text').textContent='Включить Активное AI?';bubble.classList.remove('in');
+    this._placeApAtCursor();
+    this._apFollow=false;ap.classList.add('show');           // фиксирована на месте появления, только пульсирует
+    clearTimeout(this._apTo);
+    this._apTo=setTimeout(()=>bubble.classList.add('in'),700);  // СНАЧАЛА тултип, потом клик
+    ap.querySelector('.ap-dot').onclick=()=>this._openInput();
+  }
+  focusField(f){f.focus();const r=document.createRange();r.selectNodeContents(f);r.collapse(false);const s=getSelection();s.removeAllRanges();s.addRange(r);}
+  hidePoint(){this._apFollow=false;clearTimeout(this._apTo);const ap=document.querySelector('[data-ap]');ap.classList.remove('show','input-mode');ap.querySelector('.ap-bubble').classList.remove('in');}
+  /* выключить режим (крестик на бейдже): точка и бейдж убираются */
+  disableMode(){this._mode=false;this.hidePoint();this.hideBadge();}
+  showToast(cfg){const t=document.querySelector('[data-toast]');
+    t.querySelector('.toast-title').textContent=cfg.title||'';
+    t.querySelector('.toast-body').textContent=cfg.body||'';
+    const acts=t.querySelector('.toast-actions');acts.innerHTML='';
+    (cfg.actions||[]).forEach((a,i)=>{const b=document.createElement('button');b.className=i===0?'tb1':'tb2';b.textContent=a.label;b.onclick=()=>{this.hideToast();a.onClick&&a.onClick();};acts.appendChild(b);});
+    t.classList.remove('leaving');t.classList.add('show');void t.offsetWidth;
+    const hide=()=>{this.hideToast();cfg.onHide&&cfg.onHide();};
+    t.querySelector('.toast-close').onclick=hide;
+    clearTimeout(this._toastTo);
+    if(cfg.autohideMs)this._toastTo=setTimeout(hide,cfg.autohideMs);}
+  hideToast(){const t=document.querySelector('[data-toast]');clearTimeout(this._toastTo);if(!t.classList.contains('show'))return;t.classList.add('leaving');t.classList.remove('show');setTimeout(()=>t.classList.remove('leaving'),200);}
+  resetLayers(){this.disableMode();this.hideToast();this.closeChat();}
+  go(id){ this.clearIdle(); this.step=id; const fn=this[id]; if(typeof fn==='function') fn.call(this); }
+  next(){
+    const order=['A1','A2'];
+    const i=order.indexOf(this.step);
+    this.go(order[Math.min(i+1,order.length-1)]);
+  }
+}
+const scene=new SceneEngine(app);
+app.scene=scene;
+scene.start();
+
+function fit(){const m=24;const s=Math.min((window.innerWidth-m)/1440,(window.innerHeight-m)/848,1);document.getElementById('stage').style.setProperty('--s',s);}
+window.addEventListener('resize',fit);fit();
+</script>
+</body>
+</html>
