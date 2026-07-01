@@ -943,14 +943,14 @@ class SceneEngine{
       this.hidePoint();                                       // ушёл с доски → скрыть точку и тултип (режим жив)
     }
   }
-  /* в режиме: точка появляется НА МЕСТЕ (пульсирует, не следует) → тултип → клик открывает поле ввода к этому месту доски */
+  /* режим уже включён → БЕЗ тултипа: просто моргающая точка на месте появления; клик → поле ввода (промт к этому месту доски).
+     Тултип «Включить Активное AI?» показывается только один раз — при первом включении режима (showOffer). */
   _reArm(){
-    const ap=document.querySelector('[data-ap]');const bubble=ap.querySelector('.ap-bubble');
-    bubble.querySelector('.apb-text').textContent='Включить Активное AI?';bubble.classList.remove('in');
+    const ap=document.querySelector('[data-ap]');
+    ap.querySelector('.ap-bubble').classList.remove('in');   // тултип не показываем
     this._placeApAtCursor();
-    this._apFollow=false;ap.classList.add('show');           // фиксирована на месте появления, только пульсирует
+    this._apFollow=false;ap.classList.add('show');           // точка на месте появления, только пульсирует
     clearTimeout(this._apTo);
-    this._apTo=setTimeout(()=>bubble.classList.add('in'),700);  // СНАЧАЛА тултип, потом клик
     ap.querySelector('.ap-dot').onclick=()=>this._openInput();
   }
   focusField(f){f.focus();const r=document.createRange();r.selectNodeContents(f);r.collapse(false);const s=getSelection();s.removeAllRanges();s.addRange(r);}
