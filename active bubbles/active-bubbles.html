@@ -384,10 +384,10 @@ body{
 .ab-ctl.ab-del{padding:7px 8px;}
 .ab-div{width:1px;height:16px;background:rgba(255,255,255,.12);margin:0 2px;flex:none;}
 
-/* облако: ключевая точка + bubbles */
-.ab-cloud{position:absolute;display:none;z-index:7;left:991px;top:282px;align-items:flex-start;gap:11px;}
+/* облако: ключевая точка + bubbles. Контейнер прозрачен для кликов — доска под облаком остаётся активной; клики ловят только точка/баблы/тумблер */
+.ab-cloud{position:absolute;display:none;z-index:7;left:991px;top:282px;align-items:flex-start;gap:11px;pointer-events:none;}
 .ab-cloud.show{display:flex;}
-.ab-dot{position:relative;width:11px;height:11px;flex:none;margin-top:6px;border-radius:50%;background:#8A7CF8;box-shadow:0 0 0 6px rgba(58,48,102,.9);cursor:pointer;}
+.ab-dot{position:relative;width:11px;height:11px;flex:none;margin-top:6px;border-radius:50%;background:#8A7CF8;box-shadow:0 0 0 6px rgba(58,48,102,.9);cursor:pointer;pointer-events:auto;}
 .ab-dot:before{content:"";position:absolute;left:50%;top:50%;width:11px;height:11px;margin:-5.5px 0 0 -5.5px;border-radius:50%;border:1.5px solid #A977F8;transform-origin:center;animation:ap-ping 1.6s ease-out infinite;}
 /* облако bubbles 1:1 по компоненту 2095:80353: ширина 320, gap 6, backdrop-blur, drop-shadow */
 .ab-bubbles{display:flex;flex-direction:column;gap:6px;width:320px;
@@ -397,12 +397,12 @@ body{
 /* баблы обтекают текст (hug) и переносятся построчно как письмо — в пределах 320px */
 .ab-list{display:flex;flex-wrap:wrap;gap:6px;}
 /* bubble: фон #251c49, без бордера, радиус 2, паддинг 8, текст 10/12 белый; ширина по контенту, но не шире облака */
-.ab-bub{background:#251c49;border:0;border-radius:2px;cursor:pointer;padding:8px;
+.ab-bub{background:#251c49;border:0;border-radius:2px;cursor:pointer;padding:8px;pointer-events:auto;
   color:#fff;font-family:var(--font-body);font-weight:400;font-size:10px;line-height:12px;letter-spacing:-.2px;
   white-space:normal;max-width:100%;flex:0 0 auto;transition:background-color .12s ease;}
 .ab-bub:hover{background:#2e2456;}
 /* тумблер «Автосаджест» — тоже bubble (#251c49) + мини-свитч (#7863f6, радиус 2, белый указатель) */
-.ab-toggle{display:inline-flex;align-self:flex-start;align-items:center;gap:10px;background:#251c49;border-radius:2px;padding:8px;}
+.ab-toggle{display:inline-flex;align-self:flex-start;align-items:center;gap:10px;background:#251c49;border-radius:2px;padding:8px;pointer-events:auto;}
 .ab-tg-label{color:#fff;font-family:var(--font-body);font-weight:400;font-size:10px;line-height:12px;letter-spacing:-.2px;}
 .ab-sw{position:relative;width:24px;height:12px;border-radius:2px;background:#7863f6;cursor:pointer;flex:none;transition:background-color .15s ease;}
 .ab-sw:after{content:"";position:absolute;top:2px;right:2px;width:12px;height:8px;background:#fff;transition:left .15s ease, right .15s ease;}
