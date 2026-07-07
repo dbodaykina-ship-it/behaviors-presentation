@@ -323,6 +323,10 @@ body{
 .ap-badge .bd-x{color:rgba(255,255,255,.6);font-size:11px;cursor:pointer;}
 .ap-badge .bd-x:hover{color:#fff;}
 
+/* саджесты у инпута = весь Suggest Cloud: ключевая точка + баблы + тумблер (1:1 по Figma 2131:21261) */
+/* точка — ВНИЗУ облака, на уровне ряда «Автосаджест» */
+.ab-chat-cloud{display:flex;align-items:flex-end;gap:11px;width:100%;padding:8px 12px;}
+.ab-chat-cloud .ab-dot{margin-top:0;margin-bottom:8px;}
 /* блок чип-саджестов внизу чата (1:1 по step-8 «active suggest block») */
 .ap-suggest{display:flex;gap:8px;width:100%;padding:8px 12px;overflow-x:auto;}
 .ap-suggest::-webkit-scrollbar{display:none;}
@@ -891,7 +895,7 @@ const BUBBLES = {
   card: [   // 1:1 по компоненту 2095:80353 (раскладка получается естественным переносом)
     'Собрать всю информацию на доске в задачи','Найти убыток',
     'Проанализировать результаты и снова посмотреть\u00a0 стратегию',
-    'Предложение #2','Предложение #3 в три четрые слова',
+    'Предложение #2','Предложение #3 в три четыре слова',
     'Проанализировать результаты и снова посмотреть\u00a0 стратегию',
   ],
   text: [   // выделен текст — придумано (макета нет)
@@ -1047,7 +1051,17 @@ class SceneEngine{
   showBadge(){const b=document.querySelector('[data-badge]');b.classList.add('show');b.querySelector('.bd-x').onclick=()=>this.disableMode();}
   hideBadge(){document.querySelector('[data-badge]').classList.remove('show');}
   showSuggestChips(){const l=document.querySelector('[data-chip-layer]');if(!l)return;
-    l.innerHTML='<div class="ap-suggest"><span class="sg-chip">Больше информации</span><span class="sg-chip">Запусти претрейд по рынку сегодня</span></div>';}
+    // саджесты у инпута — весь Suggest Cloud целиком: точка + баблы карточки + тумблер «Автосаджест» (Figma 2131:21261)
+    const bubs=(BUBBLES.card||[]).map(t=>'<button class="ab-bub">'+t+'</button>').join('');
+    l.innerHTML='<div class="ab-chat-cloud"><span class="ab-dot"></span><div class="ab-bubbles">'
+      +'<div class="ab-list">'+bubs+'</div>'
+      +'<div class="ab-toggle"><span class="ab-tg-label">Автосаджест</span><span class="ab-sw on"></span></div>'
+      +'</div></div>';
+    const cloud=l.querySelector('.ab-bubbles');const sw=l.querySelector('.ab-sw');
+    l.querySelectorAll('.ab-bub').forEach(b=>b.onclick=()=>this.sendPrompt(b.textContent.trim()));   // клик по баблу → в чат
+    l.querySelector('.ab-dot').onclick=()=>cloud.classList.toggle('hidden');                          // точка прячет/показывает баблы
+    sw.onclick=()=>{const on=!sw.classList.contains('on');sw.classList.toggle('on',on);sw.classList.toggle('off',!on);cloud.classList.toggle('hidden',!on);};  // тумблер «Автосаджест»
+  }
   /* === вспомогательные слои сцены === */
   showCard(){document.querySelector('[data-card]').classList.add('show');}
   hideCard(){const c=document.querySelector('[data-card]');c.classList.remove('show');c.classList.remove('highlight');}
